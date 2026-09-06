@@ -1,0 +1,313 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          91.893,
+          25.583
+        ]
+      },
+      "properties": {
+        "id": 1,
+        "fatalities": 2,
+        "injuries": 1,
+        "size": "Medium",
+        "verification_status": "Verified",
+        "triggering_factor": "Downpour",
+        "classification": "Combined",
+        "source": "Field visit",
+        "citation": "Badavath N, Sahoo S, Chakraborty R, Wahlang M, Puwein R (2025). Landslide susceptibility mapping for East Khasi Hills district of Meghalaya, India, using frequency ratio and statistical index method. Sadhana 50:284. https://doi.org/10.1007/s12046-025-02944-2",
+        "falls_in_derived_risk_zone": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          91.799,
+          25.438
+        ]
+      },
+      "properties": {
+        "id": 2,
+        "fatalities": 1,
+        "injuries": 2,
+        "size": "Medium",
+        "verification_status": "Verified",
+        "triggering_factor": "Continuous rain",
+        "classification": "Natural",
+        "source": "Field visit",
+        "citation": "Badavath N, Sahoo S, Chakraborty R, Wahlang M, Puwein R (2025). Landslide susceptibility mapping for East Khasi Hills district of Meghalaya, India, using frequency ratio and statistical index method. Sadhana 50:284. https://doi.org/10.1007/s12046-025-02944-2",
+        "falls_in_derived_risk_zone": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          91.98,
+          25.536
+        ]
+      },
+      "properties": {
+        "id": 3,
+        "fatalities": 0,
+        "injuries": 0,
+        "size": "Small",
+        "verification_status": "Not Verified",
+        "triggering_factor": "Continuous rain",
+        "classification": "Natural",
+        "source": "NASA GLC",
+        "citation": "Badavath N, Sahoo S, Chakraborty R, Wahlang M, Puwein R (2025). Landslide susceptibility mapping for East Khasi Hills district of Meghalaya, India, using frequency ratio and statistical index method. Sadhana 50:284. https://doi.org/10.1007/s12046-025-02944-2",
+        "falls_in_derived_risk_zone": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          91.906,
+          25.567
+        ]
+      },
+      "properties": {
+        "id": 4,
+        "fatalities": 0,
+        "injuries": 0,
+        "size": "Small",
+        "verification_status": "Not Verified",
+        "triggering_factor": "Continuous rain",
+        "classification": "Natural",
+        "source": "NASA GLC",
+        "citation": "Badavath N, Sahoo S, Chakraborty R, Wahlang M, Puwein R (2025). Landslide susceptibility mapping for East Khasi Hills district of Meghalaya, India, using frequency ratio and statistical index method. Sadhana 50:284. https://doi.org/10.1007/s12046-025-02944-2",
+        "falls_in_derived_risk_zone": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          91.88,
+          25.38
+        ]
+      },
+      "properties": {
+        "id": 5,
+        "fatalities": 0,
+        "injuries": 0,
+        "size": "Medium",
+        "verification_status": "Not Verified",
+        "triggering_factor": "Rainfall",
+        "classification": "Natural",
+        "source": "NASA GLC",
+        "citation": "Badavath N, Sahoo S, Chakraborty R, Wahlang M, Puwein R (2025). Landslide susceptibility mapping for East Khasi Hills district of Meghalaya, India, using frequency ratio and statistical index method. Sadhana 50:284. https://doi.org/10.1007/s12046-025-02944-2",
+        "falls_in_derived_risk_zone": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          91.963,
+          25.518
+        ]
+      },
+      "properties": {
+        "id": 6,
+        "fatalities": 2,
+        "injuries": 0,
+        "size": "Small",
+        "verification_status": "Verified",
+        "triggering_factor": "Mining",
+        "classification": "Man-made",
+        "source": "Field visit",
+        "citation": "Badavath N, Sahoo S, Chakraborty R, Wahlang M, Puwein R (2025). Landslide susceptibility mapping for East Khasi Hills district of Meghalaya, India, using frequency ratio and statistical index method. Sadhana 50:284. https://doi.org/10.1007/s12046-025-02944-2",
+        "falls_in_derived_risk_zone": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          91.866,
+          25.577
+        ]
+      },
+      "properties": {
+        "id": 7,
+        "fatalities": 8,
+        "injuries": 1,
+        "size": "Small",
+        "verification_status": "Verified",
+        "triggering_factor": "Continuous rain",
+        "classification": "Natural",
+        "source": "Field visit",
+        "citation": "Badavath N, Sahoo S, Chakraborty R, Wahlang M, Puwein R (2025). Landslide susceptibility mapping for East Khasi Hills district of Meghalaya, India, using frequency ratio and statistical index method. Sadhana 50:284. https://doi.org/10.1007/s12046-025-02944-2",
+        "falls_in_derived_risk_zone": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          91.885,
+          25.572
+        ]
+      },
+      "properties": {
+        "id": 8,
+        "fatalities": 1,
+        "injuries": 0,
+        "size": "Medium",
+        "verification_status": "Verified",
+        "triggering_factor": "Downpour",
+        "classification": "Combined",
+        "source": "Field visit",
+        "citation": "Badavath N, Sahoo S, Chakraborty R, Wahlang M, Puwein R (2025). Landslide susceptibility mapping for East Khasi Hills district of Meghalaya, India, using frequency ratio and statistical index method. Sadhana 50:284. https://doi.org/10.1007/s12046-025-02944-2",
+        "falls_in_derived_risk_zone": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          92.022,
+          25.588
+        ]
+      },
+      "properties": {
+        "id": 9,
+        "fatalities": 0,
+        "injuries": 0,
+        "size": "Small",
+        "verification_status": "Not Verified",
+        "triggering_factor": "Continuous rain",
+        "classification": "Natural",
+        "source": "NASA GLC",
+        "citation": "Badavath N, Sahoo S, Chakraborty R, Wahlang M, Puwein R (2025). Landslide susceptibility mapping for East Khasi Hills district of Meghalaya, India, using frequency ratio and statistical index method. Sadhana 50:284. https://doi.org/10.1007/s12046-025-02944-2",
+        "falls_in_derived_risk_zone": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          91.85,
+          25.557
+        ]
+      },
+      "properties": {
+        "id": 10,
+        "fatalities": 0,
+        "injuries": 0,
+        "size": "Medium",
+        "verification_status": "Verified",
+        "triggering_factor": "Rainfall",
+        "classification": "Natural",
+        "source": "Field visit",
+        "citation": "Badavath N, Sahoo S, Chakraborty R, Wahlang M, Puwein R (2025). Landslide susceptibility mapping for East Khasi Hills district of Meghalaya, India, using frequency ratio and statistical index method. Sadhana 50:284. https://doi.org/10.1007/s12046-025-02944-2",
+        "falls_in_derived_risk_zone": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          92.075,
+          25.549
+        ]
+      },
+      "properties": {
+        "id": 11,
+        "fatalities": 0,
+        "injuries": 0,
+        "size": "Medium",
+        "verification_status": "Verified",
+        "triggering_factor": "Downpour",
+        "classification": "Combined",
+        "source": "Field visit",
+        "citation": "Badavath N, Sahoo S, Chakraborty R, Wahlang M, Puwein R (2025). Landslide susceptibility mapping for East Khasi Hills district of Meghalaya, India, using frequency ratio and statistical index method. Sadhana 50:284. https://doi.org/10.1007/s12046-025-02944-2",
+        "falls_in_derived_risk_zone": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          91.876,
+          25.371
+        ]
+      },
+      "properties": {
+        "id": 12,
+        "fatalities": 2,
+        "injuries": 3,
+        "size": "Big",
+        "verification_status": "Verified",
+        "triggering_factor": "Downpour",
+        "classification": "Combined",
+        "source": "Field visit",
+        "citation": "Badavath N, Sahoo S, Chakraborty R, Wahlang M, Puwein R (2025). Landslide susceptibility mapping for East Khasi Hills district of Meghalaya, India, using frequency ratio and statistical index method. Sadhana 50:284. https://doi.org/10.1007/s12046-025-02944-2",
+        "falls_in_derived_risk_zone": true
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          91.902,
+          25.309
+        ]
+      },
+      "properties": {
+        "id": 13,
+        "fatalities": 0,
+        "injuries": 2,
+        "size": "Medium",
+        "verification_status": "Verified",
+        "triggering_factor": "Rainfall",
+        "classification": "Natural",
+        "source": "Field visit",
+        "citation": "Badavath N, Sahoo S, Chakraborty R, Wahlang M, Puwein R (2025). Landslide susceptibility mapping for East Khasi Hills district of Meghalaya, India, using frequency ratio and statistical index method. Sadhana 50:284. https://doi.org/10.1007/s12046-025-02944-2",
+        "falls_in_derived_risk_zone": false
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          91.876,
+          25.371
+        ]
+      },
+      "properties": {
+        "id": 14,
+        "fatalities": 4,
+        "injuries": 3,
+        "size": "Big",
+        "verification_status": "Verified",
+        "triggering_factor": "Rainfall",
+        "classification": "Natural",
+        "source": "Field visit",
+        "citation": "Badavath N, Sahoo S, Chakraborty R, Wahlang M, Puwein R (2025). Landslide susceptibility mapping for East Khasi Hills district of Meghalaya, India, using frequency ratio and statistical index method. Sadhana 50:284. https://doi.org/10.1007/s12046-025-02944-2",
+        "falls_in_derived_risk_zone": true
+      }
+    }
+  ]
+}
