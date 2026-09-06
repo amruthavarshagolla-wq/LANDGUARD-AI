@@ -1,0 +1,116 @@
+[
+  {
+    "zone_id": "RZ-002",
+    "risk_score": 92,
+    "exposure_score": 18.0,
+    "vulnerability_score": 70.0,
+    "criticality_score": 90,
+    "priority_score": 78.7,
+    "priority_band": "High",
+    "recommended_action": "URGENT (ground-confirmed): Deploy inspection team within 24 hours; prepare a contingency evacuation plan.",
+    "explanation": "Zone RZ-002 scored 78.7/100 -> Priority: High. Main drivers: a risk score of 92/100 from the prediction model, and presence of critical infrastructure (road_only_access).",
+    "data_quality_flags": [],
+    "affected_summary": {
+      "population_exposed": 300,
+      "villages": [
+        "Kotagiri Hamlet"
+      ],
+      "hospitals": 0,
+      "schools": 1,
+      "has_verified_field_report": true
+    },
+    "priority_rank": 1
+  },
+  {
+    "zone_id": "RZ-001",
+    "risk_score": 88,
+    "exposure_score": 40.0,
+    "vulnerability_score": 60.0,
+    "criticality_score": 100,
+    "priority_score": 72.8,
+    "priority_band": "High",
+    "recommended_action": "Deploy inspection team within 24 hours; prepare a contingency evacuation plan.",
+    "explanation": "Zone RZ-001 scored 72.8/100 -> Priority: High. Main drivers: a risk score of 88/100 from the prediction model, and presence of critical infrastructure (hospital).",
+    "data_quality_flags": [],
+    "affected_summary": {
+      "population_exposed": 1500,
+      "villages": [
+        "Village A",
+        "Village B"
+      ],
+      "hospitals": 1,
+      "schools": 1,
+      "has_verified_field_report": false
+    },
+    "priority_rank": 2
+  },
+  {
+    "zone_id": "RZ-004",
+    "risk_score": 70,
+    "exposure_score": 18.0,
+    "vulnerability_score": 56.0,
+    "criticality_score": 90,
+    "priority_score": 58.2,
+    "priority_band": "Medium",
+    "recommended_action": "Increase monitoring frequency at this zone; notify local officials to stay alert.",
+    "explanation": "Zone RZ-004 scored 58.2/100 -> Priority: Medium. Main drivers: a risk score of 70/100 from the prediction model, and presence of critical infrastructure (bridge_only_access).",
+    "data_quality_flags": [
+      "historical_landslide_data_missing"
+    ],
+    "affected_summary": {
+      "population_exposed": 800,
+      "villages": [
+        "Riverside Colony"
+      ],
+      "hospitals": 0,
+      "schools": 0,
+      "has_verified_field_report": false
+    },
+    "priority_rank": 3
+  },
+  {
+    "zone_id": "RZ-003",
+    "risk_score": 45,
+    "exposure_score": 85.0,
+    "vulnerability_score": 5.0,
+    "criticality_score": 100,
+    "priority_score": 58.0,
+    "priority_band": "Medium",
+    "recommended_action": "Increase monitoring frequency at this zone; notify local officials to stay alert.",
+    "explanation": "Zone RZ-003 scored 58.0/100 -> Priority: Medium. Main drivers: 5000 people across 2 village(s) exposed, and presence of critical infrastructure (hospital).",
+    "data_quality_flags": [],
+    "affected_summary": {
+      "population_exposed": 5000,
+      "villages": [
+        "Townside Ward 1",
+        "Townside Ward 2"
+      ],
+      "hospitals": 1,
+      "schools": 2,
+      "has_verified_field_report": false
+    },
+    "priority_rank": 4
+  },
+  {
+    "zone_id": "RZ-005",
+    "risk_score": 20,
+    "exposure_score": 11.0,
+    "vulnerability_score": 20.0,
+    "criticality_score": 80,
+    "priority_score": 29.8,
+    "priority_band": "Low",
+    "recommended_action": "Continue routine monitoring; no immediate action required.",
+    "explanation": "Zone RZ-005 scored 29.8/100 -> Priority: Low. Main drivers: presence of critical infrastructure (road_only_access), and a risk score of 20/100 from the prediction model.",
+    "data_quality_flags": [],
+    "affected_summary": {
+      "population_exposed": 100,
+      "villages": [
+        "Hilltop Farms"
+      ],
+      "hospitals": 0,
+      "schools": 0,
+      "has_verified_field_report": false
+    },
+    "priority_rank": 5
+  }
+]
