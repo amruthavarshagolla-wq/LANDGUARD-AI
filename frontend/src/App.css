@@ -1,0 +1,837 @@
+/* =========================================================
+   LANDGUARD AI
+   Application-Level Design System
+   Nature × Technology × Emergency Intelligence
+   ========================================================= */
+
+
+/* =========================================================
+   APP FOUNDATION
+   ========================================================= */
+
+.app {
+  width: 100%;
+  min-height: 100vh;
+  position: relative;
+}
+
+
+/* =========================================================
+   MAIN APPLICATION CONTENT
+   ========================================================= */
+
+.app main {
+  width: 100%;
+  position: relative;
+}
+
+
+/* =========================================================
+   SECTION SYSTEM
+   ========================================================= */
+
+.app section {
+  position: relative;
+  width: 100%;
+}
+
+
+/* =========================================================
+   SECTION DIVIDER
+   ========================================================= */
+
+.app section + section {
+  border-top: 1px solid rgba(247, 244, 213, 0.045);
+}
+
+
+/* =========================================================
+   UNIVERSAL SURFACE
+   ========================================================= */
+
+.surface {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.055),
+      rgba(255, 255, 255, 0.018)
+    );
+
+  border: 1px solid rgba(247, 244, 213, 0.09);
+
+  border-radius: 22px;
+
+  box-shadow:
+    0 18px 45px rgba(0, 0, 0, 0.20),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  transition:
+    transform 0.28s ease,
+    border-color 0.28s ease,
+    box-shadow 0.28s ease,
+    background 0.28s ease;
+}
+
+
+.surface:hover {
+  transform: translateY(-3px);
+
+  border-color: rgba(131, 153, 88, 0.25);
+
+  box-shadow:
+    0 24px 55px rgba(0, 0, 0, 0.26),
+    0 0 28px rgba(131, 153, 88, 0.07);
+}
+
+
+/* =========================================================
+   ELEVATED CARD
+   ========================================================= */
+
+.elevated-card {
+  position: relative;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(10, 51, 35, 0.88),
+      rgba(7, 38, 29, 0.72)
+    );
+
+  border: 1px solid rgba(247, 244, 213, 0.09);
+
+  border-radius: 20px;
+
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+
+  overflow: hidden;
+}
+
+
+.elevated-card::before {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+  left: 0;
+  right: 0;
+
+  height: 1px;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(131, 153, 88, 0.45),
+      transparent
+    );
+
+  opacity: 0.7;
+}
+
+
+/* =========================================================
+   CARD HEADER
+   ========================================================= */
+
+.card-header {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 16px;
+
+  margin-bottom: 20px;
+}
+
+
+.card-header h2,
+.card-header h3 {
+  color: var(--beige);
+
+  font-weight: 650;
+
+  letter-spacing: -0.02em;
+}
+
+
+.card-header p {
+  color: var(--muted-text);
+
+  font-size: 14px;
+}
+
+
+/* =========================================================
+   EYEBROW / SYSTEM LABEL
+   ========================================================= */
+
+.eyebrow {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  color: var(--moss-green);
+
+  font-size: 11px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.14em;
+
+  text-transform: uppercase;
+}
+
+
+.eyebrow::before {
+  content: "";
+
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background: var(--moss-green);
+
+  box-shadow:
+    0 0 10px rgba(131, 153, 88, 0.5);
+}
+
+
+/* =========================================================
+   STATUS BADGES
+   ========================================================= */
+
+.status-badge {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 7px;
+
+  padding: 6px 11px;
+
+  border-radius: 999px;
+
+  background: rgba(131, 153, 88, 0.08);
+
+  border: 1px solid rgba(131, 153, 88, 0.18);
+
+  color: var(--light-text);
+
+  font-size: 11px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.07em;
+
+  text-transform: uppercase;
+}
+
+
+.status-badge::before {
+  content: "";
+
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background: var(--success);
+
+  box-shadow:
+    0 0 9px rgba(111, 159, 98, 0.55);
+}
+
+
+/* =========================================================
+   LIVE SYSTEM BADGE
+   ========================================================= */
+
+.live-status {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  padding: 7px 12px;
+
+  border-radius: 999px;
+
+  background: rgba(111, 159, 98, 0.08);
+
+  border: 1px solid rgba(111, 159, 98, 0.18);
+
+  color: #c8d9b8;
+
+  font-size: 11px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.08em;
+
+  text-transform: uppercase;
+}
+
+
+.live-status::before {
+  content: "";
+
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+
+  background: var(--success);
+
+  box-shadow:
+    0 0 0 4px rgba(111, 159, 98, 0.08),
+    0 0 14px rgba(111, 159, 98, 0.45);
+
+  animation: appLivePulse 2s ease-in-out infinite;
+}
+
+
+/* =========================================================
+   RISK STATUS COLORS
+   ========================================================= */
+
+.risk-critical {
+  color: var(--rosy-brown);
+
+  background: rgba(211, 150, 140, 0.08);
+
+  border-color: rgba(211, 150, 140, 0.22);
+}
+
+
+.risk-high {
+  color: var(--warning);
+
+  background: rgba(217, 164, 65, 0.08);
+
+  border-color: rgba(217, 164, 65, 0.22);
+}
+
+
+.risk-medium {
+  color: #c7b65a;
+
+  background: rgba(199, 182, 90, 0.08);
+
+  border-color: rgba(199, 182, 90, 0.20);
+}
+
+
+.risk-low {
+  color: var(--moss-green);
+
+  background: rgba(131, 153, 88, 0.08);
+
+  border-color: rgba(131, 153, 88, 0.20);
+}
+
+
+/* =========================================================
+   METRIC NUMBER
+   ========================================================= */
+
+.metric-value {
+  color: var(--beige);
+
+  font-size: clamp(28px, 4vw, 42px);
+
+  font-weight: 750;
+
+  line-height: 1;
+
+  letter-spacing: -0.045em;
+}
+
+
+.metric-label {
+  margin-top: 7px;
+
+  color: var(--muted-text);
+
+  font-size: 13px;
+}
+
+
+/* =========================================================
+   DATA VALUE
+   ========================================================= */
+
+.data-value {
+  color: var(--light-text);
+
+  font-size: 20px;
+
+  font-weight: 700;
+
+  letter-spacing: -0.02em;
+}
+
+
+/* =========================================================
+   PROGRESS TRACK
+   ========================================================= */
+
+.progress-track {
+  width: 100%;
+
+  height: 7px;
+
+  overflow: hidden;
+
+  border-radius: 999px;
+
+  background: rgba(247, 244, 213, 0.07);
+}
+
+
+.progress-fill {
+  height: 100%;
+
+  border-radius: inherit;
+
+  background:
+    linear-gradient(
+      90deg,
+      var(--moss-green),
+      #a4b873
+    );
+
+  box-shadow:
+    0 0 14px rgba(131, 153, 88, 0.22);
+
+  transition: width 0.6s ease;
+}
+
+
+/* =========================================================
+   BUTTON SYSTEM
+   ========================================================= */
+
+.primary-button {
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 9px;
+
+  min-height: 42px;
+
+  padding: 10px 18px;
+
+  border-radius: 12px;
+
+  color: var(--dark-green);
+
+  background:
+    linear-gradient(
+      135deg,
+      var(--beige),
+      #dfe2bd
+    );
+
+  font-size: 13px;
+
+  font-weight: 700;
+
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.16);
+
+  cursor: pointer;
+}
+
+
+.primary-button:hover {
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.22),
+    0 0 20px rgba(247, 244, 213, 0.10);
+}
+
+
+.secondary-button {
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 9px;
+
+  min-height: 42px;
+
+  padding: 10px 18px;
+
+  border-radius: 12px;
+
+  color: var(--light-text);
+
+  background: rgba(247, 244, 213, 0.045);
+
+  border: 1px solid rgba(247, 244, 213, 0.11);
+
+  font-size: 13px;
+
+  font-weight: 650;
+
+  cursor: pointer;
+}
+
+
+.secondary-button:hover {
+  background: rgba(131, 153, 88, 0.09);
+
+  border-color: rgba(131, 153, 88, 0.28);
+}
+
+
+/* =========================================================
+   ICON CONTAINER
+   ========================================================= */
+
+.icon-box {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  width: 42px;
+  height: 42px;
+
+  flex-shrink: 0;
+
+  border-radius: 12px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(131, 153, 88, 0.13),
+      rgba(16, 86, 102, 0.10)
+    );
+
+  border: 1px solid rgba(131, 153, 88, 0.16);
+
+  color: var(--moss-green);
+}
+
+
+/* =========================================================
+   DATA DIVIDER
+   ========================================================= */
+
+.data-divider {
+  width: 100%;
+
+  height: 1px;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(247, 244, 213, 0.10),
+      transparent
+    );
+}
+
+
+/* =========================================================
+   DECORATIVE GLOW
+   ========================================================= */
+
+.glow-orb {
+  position: absolute;
+
+  width: 180px;
+  height: 180px;
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(131, 153, 88, 0.12),
+      transparent 70%
+    );
+
+  filter: blur(8px);
+
+  pointer-events: none;
+}
+
+
+/* =========================================================
+   SECTION BACKGROUND
+   ========================================================= */
+
+.section-dark {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(4, 25, 18, 0.08),
+      rgba(4, 25, 18, 0.22)
+    );
+}
+
+
+.section-green {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(10, 51, 35, 0.14),
+      rgba(16, 86, 102, 0.08)
+    );
+}
+
+
+/* =========================================================
+   TOOLTIP-STYLE INFORMATION
+   ========================================================= */
+
+.info-label {
+  color: var(--subtle-text);
+
+  font-size: 11px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.06em;
+
+  text-transform: uppercase;
+}
+
+
+.info-text {
+  color: var(--light-text);
+
+  font-size: 14px;
+}
+
+
+/* =========================================================
+   EMPTY STATE
+   ========================================================= */
+
+.empty-state {
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  min-height: 180px;
+
+  padding: 30px;
+
+  text-align: center;
+
+  border-radius: 18px;
+
+  background: rgba(247, 244, 213, 0.025);
+
+  border: 1px dashed rgba(247, 244, 213, 0.10);
+}
+
+
+.empty-state h3 {
+  color: var(--beige);
+
+  margin-bottom: 6px;
+}
+
+
+.empty-state p {
+  color: var(--muted-text);
+
+  font-size: 13px;
+}
+
+
+/* =========================================================
+   DEMO NOTICE
+   ========================================================= */
+
+.demo-notice {
+  margin: 22px auto 0;
+
+  width: min(1100px, calc(100% - 40px));
+
+  padding: 10px 14px;
+
+  border-radius: 10px;
+
+  background: rgba(217, 164, 65, 0.055);
+
+  border: 1px solid rgba(217, 164, 65, 0.12);
+
+  color: #cdbb86;
+
+  font-size: 11px;
+
+  text-align: center;
+}
+
+
+/* =========================================================
+   TABLE / DATA GRID
+   ========================================================= */
+
+.data-grid {
+  width: 100%;
+
+  border-collapse: separate;
+
+  border-spacing: 0;
+
+  overflow: hidden;
+
+  border: 1px solid rgba(247, 244, 213, 0.08);
+
+  border-radius: 16px;
+}
+
+
+.data-grid th {
+  padding: 12px 14px;
+
+  color: var(--muted-text);
+
+  background: rgba(247, 244, 213, 0.035);
+
+  font-size: 11px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.07em;
+
+  text-align: left;
+
+  text-transform: uppercase;
+}
+
+
+.data-grid td {
+  padding: 13px 14px;
+
+  color: var(--light-text);
+
+  border-top: 1px solid rgba(247, 244, 213, 0.055);
+
+  font-size: 13px;
+}
+
+
+.data-grid tr:hover td {
+  background: rgba(131, 153, 88, 0.035);
+}
+
+
+/* =========================================================
+   MOBILE OPTIMIZATION
+   ========================================================= */
+
+@media (max-width: 768px) {
+  .surface {
+    border-radius: 18px;
+  }
+
+  .elevated-card {
+    border-radius: 18px;
+  }
+
+  .card-header {
+    align-items: flex-start;
+
+    flex-direction: column;
+
+    gap: 10px;
+  }
+
+  .metric-value {
+    font-size: 32px;
+  }
+
+  .primary-button,
+  .secondary-button {
+    width: 100%;
+  }
+
+  .demo-notice {
+    width: calc(100% - 28px);
+  }
+}
+
+
+/* =========================================================
+   SMALL MOBILE
+   ========================================================= */
+
+@media (max-width: 480px) {
+  .surface {
+    border-radius: 16px;
+  }
+
+  .elevated-card {
+    border-radius: 16px;
+  }
+
+  .icon-box {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+
+/* =========================================================
+   ANIMATIONS
+   ========================================================= */
+
+@keyframes appLivePulse {
+  0%,
+  100% {
+    opacity: 1;
+
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.55;
+
+    transform: scale(0.82);
+  }
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .surface,
+  button {
+    transition: none;
+  }
+
+  .live-status::before {
+    animation: none;
+  }
+}
