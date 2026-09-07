@@ -150,6 +150,10 @@ function ImpactAnalysis({ selectedZone }) {
   const currentImpact =
     impactDataByZone[selectedZone?.id] || defaultImpactData;
 
+  // --------------------------------------------------
+  // EXPOSURE CATEGORIES
+  // --------------------------------------------------
+
   const categories = [
     {
       key: "population",
@@ -165,7 +169,7 @@ function ImpactAnalysis({ selectedZone }) {
       label: "Infrastructure",
       icon: "🏥",
       value: currentImpact.infrastructure.value,
-      description: "Critical facilities at risk",
+      description: "Essential facilities at risk",
       percentage: currentImpact.infrastructure.percentage,
     },
 
@@ -197,13 +201,13 @@ function ImpactAnalysis({ selectedZone }) {
       priority: "CRITICAL",
       title: "Prepare Emergency Response",
       description:
-        "Activate emergency response teams and prepare evacuation resources for high-risk zones.",
+        "Activate emergency response teams and prepare evacuation resources for affected zones.",
       icon: "🚨",
     },
 
     {
       priority: "HIGH",
-      title: "Monitor Critical Infrastructure",
+      title: "Monitor Essential Infrastructure",
       description:
         "Increase monitoring around hospitals, roads and other essential infrastructure.",
       icon: "🏥",
@@ -226,11 +230,26 @@ function ImpactAnalysis({ selectedZone }) {
     },
   ];
 
+  // --------------------------------------------------
+  // CONTENT FILTER
+  // --------------------------------------------------
+
   const visibleActions =
     selectedCategory === "ALL"
       ? responseActions
       : responseActions.filter((action) => {
-          return action.priority === selectedCategory;
+          if (selectedCategory === "URGENT") {
+            return action.priority === "CRITICAL";
+          }
+
+          if (selectedCategory === "MONITORING") {
+            return (
+              action.priority === "HIGH" ||
+              action.priority === "MEDIUM"
+            );
+          }
+
+          return true;
         });
 
   // --------------------------------------------------
@@ -350,7 +369,7 @@ function ImpactAnalysis({ selectedZone }) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1.3fr 0.7fr",
+          gridTemplateColumns: "1fr",
           gap: "20px",
           marginBottom: "20px",
         }}
@@ -414,7 +433,7 @@ function ImpactAnalysis({ selectedZone }) {
                   margin: "0 0 8px",
                 }}
               >
-                {currentImpact.impactLevel}
+                Current Exposure Assessment
               </h3>
 
               <p
@@ -459,8 +478,7 @@ function ImpactAnalysis({ selectedZone }) {
                     fontWeight: "900",
                   }}
                 >
-                  RESPONSE PRIORITY:{" "}
-                  {currentImpact.responsePriority}
+                  RESPONSE READINESS
                 </span>
               </div>
             </div>
@@ -519,89 +537,6 @@ function ImpactAnalysis({ selectedZone }) {
             </div>
           </div>
         </div>
-
-        {/* RESPONSE STATUS */}
-
-        <div
-          style={{
-            background:
-              "linear-gradient(145deg, rgba(16,86,102,0.9), rgba(10,51,35,0.98))",
-            border: "1px solid rgba(131,153,88,0.25)",
-            borderRadius: "22px",
-            padding: "25px",
-          }}
-        >
-          <p
-            style={{
-              color: "#839958",
-              fontSize: "11px",
-              fontWeight: "900",
-              letterSpacing: "1.5px",
-              margin: "0 0 10px",
-            }}
-          >
-            RESPONSE STATUS
-          </p>
-
-          <h3
-            style={{
-              color: "#F7F4D5",
-              margin: "0 0 18px",
-              fontSize: "21px",
-            }}
-          >
-            {currentImpact.responsePriority === "CRITICAL"
-              ? "🚨 Critical Priority"
-              : currentImpact.responsePriority === "HIGH"
-              ? "⚠️ High Priority"
-              : "✓ Normal Priority"}
-          </h3>
-
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "13px",
-            }}
-          >
-            {currentImpact.responseStatus.map(([label, value]) => (
-              <div
-                key={label}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  paddingBottom: "10px",
-                  borderBottom:
-                    "1px solid rgba(247,244,213,0.07)",
-                }}
-              >
-                <span
-                  style={{
-                    color: "#AAB69A",
-                    fontSize: "11px",
-                  }}
-                >
-                  {label}
-                </span>
-
-                <strong
-                  style={{
-                    color:
-                      value === "HIGH"
-                        ? "#D3968C"
-                        : value === "MEDIUM"
-                        ? "#D9A441"
-                        : "#839958",
-                    fontSize: "10px",
-                  }}
-                >
-                  {value}
-                </strong>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* =====================================
@@ -611,8 +546,7 @@ function ImpactAnalysis({ selectedZone }) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns:
-            "repeat(4, minmax(0, 1fr))",
+          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
           gap: "15px",
           marginBottom: "20px",
         }}
@@ -844,8 +778,7 @@ function ImpactAnalysis({ selectedZone }) {
               padding: "13px",
               borderRadius: "11px",
               background: "rgba(131,153,88,0.07)",
-              border:
-                "1px solid rgba(131,153,88,0.16)",
+              border: "1px solid rgba(131,153,88,0.16)",
             }}
           >
             <p
@@ -926,12 +859,10 @@ function ImpactAnalysis({ selectedZone }) {
                 flexWrap: "wrap",
               }}
             >
-              {["ALL", "CRITICAL", "HIGH"].map((filter) => (
+              {["ALL", "URGENT", "MONITORING"].map((filter) => (
                 <button
                   key={filter}
-                  onClick={() =>
-                    setSelectedCategory(filter)
-                  }
+                  onClick={() => setSelectedCategory(filter)}
                   style={{
                     border:
                       selectedCategory === filter
@@ -973,8 +904,7 @@ function ImpactAnalysis({ selectedZone }) {
                   gap: "13px",
                   padding: "13px",
                   borderRadius: "12px",
-                  background:
-                    "rgba(10,51,35,0.48)",
+                  background: "rgba(10,51,35,0.48)",
                   border:
                     "1px solid rgba(247,244,213,0.06)",
                 }}
@@ -1027,7 +957,11 @@ function ImpactAnalysis({ selectedZone }) {
                         fontWeight: "900",
                       }}
                     >
-                      {action.priority}
+                      {action.priority === "CRITICAL"
+                        ? "URGENT"
+                        : action.priority === "HIGH"
+                        ? "MONITOR"
+                        : "ROUTINE"}
                     </span>
                   </div>
 
@@ -1060,23 +994,6 @@ function ImpactAnalysis({ selectedZone }) {
           </div>
         </div>
       </div>
-
-      {/* =====================================
-          DATA NOTICE
-      ===================================== */}
-
-      <p
-        style={{
-          color: "#7F8C72",
-          fontSize: "11px",
-          marginTop: "14px",
-          textAlign: "right",
-        }}
-      >
-        * Impact values currently use demonstration data and
-        will later be connected to GET /api/impact using the
-        selected Zone ID.
-      </p>
     </section>
   );
 }

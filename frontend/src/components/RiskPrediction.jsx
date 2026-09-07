@@ -49,16 +49,23 @@ const predictionData = {
         icon: "🏔️",
       },
       {
-        name: "Temperature",
-        value: "23°C",
-        contribution: 3,
-        description: "Current temperature",
-        icon: "🌡️",
+        name: "Deforestation",
+        value: "32%",
+        contribution: 2,
+        description: "Reduced vegetation cover detected",
+        icon: "🌳",
+      },
+      {
+        name: "Earthquake Distance",
+        value: "18 km",
+        contribution: 1,
+        description: "Nearby seismic activity zone",
+        icon: "📍",
       },
     ],
 
     explanation:
-      "The critical risk level is primarily driven by very heavy rainfall, critical soil saturation, and highly unstable terrain. Combined with frequent historical landslide activity, these conditions indicate a significantly elevated probability of landslide occurrence.",
+      "The critical risk level is primarily driven by very heavy rainfall, critical soil saturation, and highly unstable terrain. Reduced vegetation cover and proximity to seismic activity further increase slope vulnerability.",
   },
 
   ZONE_10453: {
@@ -105,16 +112,23 @@ const predictionData = {
         icon: "🏔️",
       },
       {
-        name: "Temperature",
-        value: "24°C",
-        contribution: 4,
-        description: "Current temperature",
-        icon: "🌡️",
+        name: "Deforestation",
+        value: "18%",
+        contribution: 3,
+        description: "Moderate vegetation loss detected",
+        icon: "🌳",
+      },
+      {
+        name: "Earthquake Distance",
+        value: "42 km",
+        contribution: 1,
+        description: "Moderate distance from seismic zone",
+        icon: "📍",
       },
     ],
 
     explanation:
-      "The high risk level is mainly influenced by heavy rainfall, elevated soil moisture, and steep terrain. These environmental conditions are increasing slope susceptibility and require enhanced monitoring.",
+      "The high risk level is mainly influenced by heavy rainfall, elevated soil moisture, and steep terrain. Moderate vegetation loss and proximity to seismic activity are additional contributing factors requiring enhanced monitoring.",
   },
 
   ZONE_10454: {
@@ -161,16 +175,23 @@ const predictionData = {
         icon: "🏔️",
       },
       {
-        name: "Temperature",
-        value: "25°C",
-        contribution: 2,
-        description: "Normal temperature",
-        icon: "🌡️",
+        name: "Deforestation",
+        value: "8%",
+        contribution: 1,
+        description: "Low vegetation loss detected",
+        icon: "🌳",
+      },
+      {
+        name: "Earthquake Distance",
+        value: "95 km",
+        contribution: 1,
+        description: "Far from major seismic zone",
+        icon: "📍",
       },
     ],
 
     explanation:
-      "The current risk remains relatively low because rainfall and soil moisture are within a safer range, while the terrain has lower slope instability. Routine monitoring should continue.",
+      "The current risk remains relatively low because rainfall and soil moisture are within a safer range, while the terrain has lower slope instability. Vegetation cover remains relatively stable and the zone is farther from major seismic activity.",
   },
 };
 
@@ -222,16 +243,23 @@ const defaultPrediction = {
       icon: "🏔️",
     },
     {
-      name: "Temperature",
-      value: "24°C",
-      contribution: 4,
-      description: "Current temperature",
-      icon: "🌡️",
+      name: "Deforestation",
+      value: "21%",
+      contribution: 3,
+      description: "Vegetation loss detected",
+      icon: "🌳",
+    },
+    {
+      name: "Earthquake Distance",
+      value: "35 km",
+      contribution: 1,
+      description: "Distance from seismic zone",
+      icon: "📍",
     },
   ],
 
   explanation:
-    "The current risk level is primarily driven by heavy rainfall, elevated soil moisture, and steep terrain. These conditions increase slope instability and indicate a significantly higher probability of landslide activity.",
+    "The current risk level is primarily driven by heavy rainfall, elevated soil moisture, and steep terrain. These conditions increase slope instability, while vegetation loss and seismic proximity provide additional environmental risk indicators.",
 };
 
 // =====================================================
@@ -628,6 +656,7 @@ function RiskPrediction({ selectedZone }) {
                       color: "#F7F4D5",
                       fontSize: "16px",
                       fontWeight: "900",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     {factor.value}

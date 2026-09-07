@@ -1331,24 +1331,6 @@ function RiskTimeline({ selectedZone }) {
           ))}
         </div>
       </div>
-
-      {/* =====================================
-          NOTICE
-      ===================================== */}
-
-      <p
-        style={{
-          color: "#7F8C72",
-          fontSize: "11px",
-          marginTop: "14px",
-          textAlign: "right",
-        }}
-      >
-        * Timeline values currently use
-        demonstration data and will later
-        connect to GET /api/timeline using
-        the selected Zone ID.
-      </p>
     </section>
   );
 }

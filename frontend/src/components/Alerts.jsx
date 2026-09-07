@@ -873,20 +873,6 @@ function Alerts({ selectedZone }) {
           </p>
         </div>
       )}
-
-      {/* DEMO NOTICE */}
-
-      <p
-        style={{
-          color: "#7F8C72",
-          fontSize: "11px",
-          marginTop: "14px",
-          textAlign: "right",
-        }}
-      >
-        * Alert information currently uses demonstration data and
-        will be connected to the backend alert service.
-      </p>
     </section>
   );
 }

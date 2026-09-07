@@ -914,22 +914,6 @@ function EarlyWarning({ selectedZone }) {
       </div>
 
       {/* =================================================
-          DEMO NOTICE
-      ================================================= */}
-
-      <p
-        style={{
-          color: "#7F8C72",
-          fontSize: "11px",
-          marginTop: "14px",
-          textAlign: "right",
-        }}
-      >
-        * Warning values currently use demonstration data and
-        will be connected to the backend prediction service.
-      </p>
-
-      {/* =================================================
           ANIMATION
       ================================================= */}
 

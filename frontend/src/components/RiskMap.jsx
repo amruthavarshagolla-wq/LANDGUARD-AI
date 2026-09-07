@@ -7,7 +7,9 @@ import {
   LayersControl,
   ZoomControl,
 } from "react-leaflet";
+
 import L from "leaflet";
+
 import "leaflet/dist/leaflet.css";
 
 // =====================================================
@@ -641,22 +643,6 @@ function RiskMap({ selectedZone, onZoneSelect }) {
           </div>
         ))}
       </div>
-
-      {/* =================================================
-          DEMO NOTICE
-      ================================================= */}
-
-      <p
-        style={{
-          color: "#7F8C72",
-          fontSize: "11px",
-          marginTop: "12px",
-          textAlign: "right",
-        }}
-      >
-        * Zone IDs and risk values currently use
-        demonstration data.
-      </p>
     </section>
   );
 }
