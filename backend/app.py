@@ -5,6 +5,9 @@ from psycopg2.extras import Json
 from dotenv import load_dotenv
 from datetime import datetime
 import os
+import joblib
+import numpy as np
+import pandas as pd
 from werkzeug.utils import secure_filename
 
 # Load environment variables from .env
@@ -32,6 +35,32 @@ ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
+# =========================================================
+# AI MODEL CONFIGURATION
+# =========================================================
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.abspath(
+    os.path.join(
+        BASE_DIR,
+        "..",
+        "ai-ml",
+        "model",
+        "landslide_model.joblib"
+    )
+)
+
+ai_model = None
+ai_model_error = None
+
+try:
+    ai_model = joblib.load(MODEL_PATH)
+    print(f"AI model loaded successfully from: {MODEL_PATH}")
+except Exception as e:
+    ai_model_error = str(e)
+    print(f"AI model could not be loaded: {e}")
 
 
 # =========================================================
@@ -363,16 +392,31 @@ def create_risk_zone():
 # AI PREDICTION
 # =========================================================
 
+def ai_risk_category(score):
+    if score < 25:
+        return "LOW"
+    elif score < 50:
+        return "MODERATE"
+    elif score < 75:
+        return "HIGH"
+    else:
+        return "VERY_HIGH"
+
+
 @app.route("/api/prediction", methods=["GET"])
 def prediction_info():
 
     return jsonify({
         "success": True,
         "data": {
-            "status": "NOT_CONNECTED",
+            "status": "CONNECTED" if ai_model is not None else "NOT_CONNECTED",
             "model": "Random Forest",
             "model_file": "landslide_model.joblib",
-            "message": "AI model integration will be connected when the AI/ML module is provided.",
+            "message": (
+                "AI landslide risk model is connected and ready."
+                if ai_model is not None
+                else "AI model could not be loaded."
+            ),
             "input_fields": [
                 "latitude",
                 "longitude",
@@ -381,9 +425,23 @@ def prediction_info():
                 "elevation_m",
                 "soil_clay_percent",
                 "soil_sand_percent",
+                "land_cover",
+                "aspect_deg",
+                "distance_to_road_m"
+            ],
+            "model_features": [
+                "elevation_m",
+                "slope_deg",
+                "rainfall_mm",
+                "soil_clay_percent",
+                "soil_sand_percent",
+                "distance_to_road_m",
+                "aspect_sin",
+                "aspect_cos",
                 "land_cover"
             ],
             "output_fields": [
+                "prediction",
                 "landslide_probability",
                 "risk_score",
                 "risk_category",
@@ -400,6 +458,12 @@ def predict():
     try:
         data = request.get_json()
 
+        if not data:
+            return jsonify({
+                "success": False,
+                "error": "Request body must contain JSON data."
+            }), 400
+
         required_fields = [
             "latitude",
             "longitude",
@@ -408,7 +472,9 @@ def predict():
             "elevation_m",
             "soil_clay_percent",
             "soil_sand_percent",
-            "land_cover"
+            "land_cover",
+            "aspect_deg",
+            "distance_to_road_m"
         ]
 
         missing_fields = [
@@ -423,20 +489,69 @@ def predict():
                 "missing_fields": missing_fields
             }), 400
 
+        if ai_model is None:
+            return jsonify({
+                "success": False,
+                "error": "AI model is not available.",
+                "model_error": ai_model_error
+            }), 503
+
+        latitude = float(data["latitude"])
+        longitude = float(data["longitude"])
+        rainfall_mm = float(data["rainfall_mm"])
+        slope_deg = float(data["slope_deg"])
+        elevation_m = float(data["elevation_m"])
+        soil_clay_percent = float(data["soil_clay_percent"])
+        soil_sand_percent = float(data["soil_sand_percent"])
+        land_cover = int(data["land_cover"])
+        aspect_deg = float(data["aspect_deg"])
+        distance_to_road_m = float(data["distance_to_road_m"])
+
+        aspect_rad = np.deg2rad(aspect_deg)
+
+        row = pd.DataFrame([{
+            "elevation_m": elevation_m,
+            "slope_deg": slope_deg,
+            "rainfall_mm": rainfall_mm,
+            "soil_clay_percent": soil_clay_percent,
+            "soil_sand_percent": soil_sand_percent,
+            "distance_to_road_m": distance_to_road_m,
+            "aspect_sin": np.sin(aspect_rad),
+            "aspect_cos": np.cos(aspect_rad),
+            "land_cover": land_cover
+        }])
+
+        prediction = int(ai_model.predict(row)[0])
+        probability = float(ai_model.predict_proba(row)[0][1])
+        risk_score = probability * 100
+        risk_category = ai_risk_category(risk_score)
+
         return jsonify({
             "success": True,
             "data": {
-                "status": "NOT_CONNECTED",
-                "message": "AI model is not connected yet. No risk score has been generated.",
-                "input": data
+                "status": "CONNECTED",
+                "zone_id": data.get("zone_id"),
+                "prediction": prediction,
+                "landslide_probability": round(probability, 4),
+                "risk_score": round(risk_score, 2),
+                "risk_category": risk_category,
+                "latitude": latitude,
+                "longitude": longitude
             }
         })
+
+    except (TypeError, ValueError) as e:
+        return jsonify({
+            "success": False,
+            "error": f"Invalid input value: {str(e)}"
+        }), 400
 
     except Exception as e:
         return jsonify({
             "success": False,
             "error": str(e)
         }), 500
+
 
 
 # =========================================================
