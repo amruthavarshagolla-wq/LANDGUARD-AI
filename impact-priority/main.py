@@ -1,8 +1,7 @@
 """
 main.py
 =======
-Entry point. Loads sample data, runs the full pipeline, prints a ranked
-table, and writes the final JSON output (what would be sent to backend).
+Entry point. Loads sample data, runs the full pipeline, prints an operational-response table, and writes the final JSON output (what would be sent to backend).
 
 RUN: python main.py
 """
@@ -31,21 +30,21 @@ def main():
     results = run_pipeline(data)
 
     print("\n" + "=" * 90)
-    print("LANDGUARD AI — PRIORITY RANKING (highest priority first)")
+    print("LANDGUARD AI — OPERATIONAL RESPONSE SUGGESTIONS")
     print("=" * 90)
     for r in results:
-        print(f"\n#{r['priority_rank']}  {r['zone_id']}  |  Priority: {r['priority_band']} "
-              f"({r['priority_score']}/100)  |  Risk: {r['risk_score']}")
-        print(f"   Action: {r['recommended_action']}")
+        print(f"\n{r['zone_id']}  |  Risk: {r['risk_score']}")
+        for suggestion in r["operational_suggestions"]:
+            print(f"   - {suggestion}")
         print(f"   Why: {r['explanation']}")
         if r["data_quality_flags"]:
             print(f"   [Data quality flags: {', '.join(r['data_quality_flags'])}]")
 
-    with open("data/output_priority_results.json", "w") as f:
+    with open("data/output_operational_suggestions.json", "w") as f:
         json.dump(results, f, indent=2)
 
     print("\n" + "=" * 90)
-    print("Full structured output written to data/output_priority_results.json")
+    print("Full structured output written to data/output_operational_suggestions.json")
     print("=" * 90)
 
 
