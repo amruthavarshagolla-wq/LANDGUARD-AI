@@ -1,65 +1,146 @@
 import { useState } from "react";
 
-function EarlyWarning() {
-  const [showDetails, setShowDetails] = useState(false);
+// =====================================================
+// DEMO EARLY WARNING DATA
+// =====================================================
 
-  // Demo value for now.
-  // Later this will come from the backend / ML model.
-  const riskScore = 82;
+const warningData = {
+  ZONE_10452: {
+    riskScore: 92,
+    riskLevel: "CRITICAL",
+    lastCheck: "2 min ago",
+    confidence: 94,
+    responsePriority: "CRITICAL",
 
-  // -----------------------------------------
-  // DYNAMIC RISK CONFIGURATION
-  // -----------------------------------------
+    conditions: [
+      {
+        icon: "🌧️",
+        title: "Heavy Rainfall",
+        value: "210 mm",
+        description:
+          "Very heavy rainfall detected during the last 24 hours.",
+      },
+      {
+        icon: "💧",
+        title: "Soil Moisture",
+        value: "84%",
+        description:
+          "Ground saturation is critically above the safe threshold.",
+      },
+      {
+        icon: "⛰️",
+        title: "Slope Instability",
+        value: "42°",
+        description:
+          "Highly steep terrain increases landslide susceptibility.",
+      },
+    ],
 
-  let warningLevel;
-  let warningColor;
-  let warningBackground;
-  let warningBorder;
-  let warningGlow;
-  let warningMessage;
+    warningMessage:
+      "Environmental conditions indicate a critical probability of landslide activity. Immediate monitoring and emergency preparedness are strongly recommended.",
 
-  if (riskScore >= 70) {
-    // HIGH RISK
-    warningLevel = "HIGH";
-    warningColor = "#D3968C";
+    action:
+      "Activate emergency monitoring and prepare response teams.",
 
-    warningBackground =
-      "linear-gradient(135deg, #4A2525 0%, #351D22 45%, #0A3323 100%)";
+    actionDetails:
+      "Authorities should verify field conditions immediately and remain prepared for possible evacuation measures.",
+  },
 
-    warningBorder = "rgba(211,150,140,0.65)";
-    warningGlow = "rgba(211,150,140,0.25)";
+  ZONE_10453: {
+    riskScore: 78,
+    riskLevel: "HIGH",
+    lastCheck: "4 min ago",
+    confidence: 91,
+    responsePriority: "HIGH",
 
-    warningMessage =
-      "Environmental conditions indicate a high probability of landslide activity. Immediate monitoring and emergency preparedness are recommended.";
-  } else if (riskScore >= 40) {
-    // MEDIUM RISK
-    warningLevel = "MEDIUM";
-    warningColor = "#D9A441";
+    conditions: [
+      {
+        icon: "🌧️",
+        title: "Heavy Rainfall",
+        value: "165 mm",
+        description:
+          "Heavy rainfall detected during the last 24 hours.",
+      },
+      {
+        icon: "💧",
+        title: "Soil Moisture",
+        value: "72%",
+        description:
+          "Ground saturation is above the safe threshold.",
+      },
+      {
+        icon: "⛰️",
+        title: "Slope Instability",
+        value: "36°",
+        description:
+          "Steep terrain increases landslide susceptibility.",
+      },
+    ],
 
-    warningBackground =
-      "linear-gradient(135deg, #4A3A1D 0%, #35401F 45%, #0A3323 100%)";
+    warningMessage:
+      "Environmental conditions indicate a high probability of landslide activity. Enhanced monitoring and response preparedness are recommended.",
 
-    warningBorder = "rgba(217,164,65,0.65)";
-    warningGlow = "rgba(217,164,65,0.22)";
+    action:
+      "Increase monitoring and keep response teams prepared.",
 
-    warningMessage =
-      "Environmental conditions indicate a moderate possibility of landslide activity. Authorities should continue monitoring the affected area.";
-  } else {
-    // LOW RISK
-    warningLevel = "LOW";
-    warningColor = "#839958";
+    actionDetails:
+      "Authorities should continue observing field conditions and remain prepared for escalation if environmental conditions worsen.",
+  },
 
-    warningBackground =
-      "linear-gradient(135deg, #24442F 0%, #183C31 45%, #0A3323 100%)";
+  ZONE_10454: {
+    riskScore: 28,
+    riskLevel: "LOW",
+    lastCheck: "6 min ago",
+    confidence: 88,
+    responsePriority: "NORMAL",
 
-    warningBorder = "rgba(131,153,88,0.65)";
-    warningGlow = "rgba(131,153,88,0.22)";
+    conditions: [
+      {
+        icon: "🌧️",
+        title: "Rainfall",
+        value: "62 mm",
+        description:
+          "Rainfall remains within a relatively safe range.",
+      },
+      {
+        icon: "💧",
+        title: "Soil Moisture",
+        value: "42%",
+        description:
+          "Ground moisture remains within the normal range.",
+      },
+      {
+        icon: "⛰️",
+        title: "Slope Stability",
+        value: "18°",
+        description:
+          "Terrain conditions currently show lower instability.",
+      },
+    ],
 
-    warningMessage =
-      "Current environmental conditions indicate a low landslide risk. Continue routine monitoring.";
-  }
+    warningMessage:
+      "Current environmental conditions indicate a low landslide risk. Continue routine monitoring of the affected area.",
 
-  const conditions = [
+    action:
+      "Continue routine monitoring of environmental conditions.",
+
+    actionDetails:
+      "No immediate emergency action is required based on the current risk assessment.",
+  },
+};
+
+// =====================================================
+// DEFAULT DEMO DATA
+// =====================================================
+
+const defaultWarning = {
+  riskScore: 82,
+  riskLevel: "HIGH",
+  lastCheck: "2 min ago",
+  confidence: 91,
+  responsePriority: "CRITICAL",
+
+  conditions: [
     {
       icon: "🌧️",
       title: "Heavy Rainfall",
@@ -81,7 +162,87 @@ function EarlyWarning() {
       description:
         "Steep terrain increases landslide susceptibility.",
     },
-  ];
+  ],
+
+  warningMessage:
+    "Environmental conditions indicate a high probability of landslide activity. Immediate monitoring and emergency preparedness are recommended.",
+
+  action:
+    "Increase monitoring and prepare emergency response teams.",
+
+  actionDetails:
+    "Authorities should verify field conditions and remain prepared for possible evacuation measures.",
+};
+
+// =====================================================
+// EARLY WARNING
+// =====================================================
+
+function EarlyWarning({ selectedZone }) {
+  const [showDetails, setShowDetails] = useState(false);
+
+  // ===================================================
+  // SELECT WARNING DATA
+  // ===================================================
+
+  const warning =
+    warningData[selectedZone?.id] || defaultWarning;
+
+  const riskScore = warning.riskScore;
+  const warningLevel = warning.riskLevel;
+
+  // ===================================================
+  // DYNAMIC RISK COLORS
+  // ===================================================
+
+  let warningColor;
+  let warningBackground;
+  let warningBorder;
+  let warningGlow;
+
+  if (warningLevel === "CRITICAL") {
+    warningColor = "#B83A3A";
+
+    warningBackground =
+      "linear-gradient(135deg, #4A2525 0%, #351D22 45%, #0A3323 100%)";
+
+    warningBorder = "rgba(184,58,58,0.7)";
+    warningGlow = "rgba(184,58,58,0.28)";
+  } else if (warningLevel === "HIGH") {
+    warningColor = "#E07A32";
+
+    warningBackground =
+      "linear-gradient(135deg, #4A3020 0%, #35401F 45%, #0A3323 100%)";
+
+    warningBorder = "rgba(224,122,50,0.7)";
+    warningGlow = "rgba(224,122,50,0.25)";
+  } else {
+    warningColor = "#5C8D45";
+
+    warningBackground =
+      "linear-gradient(135deg, #24442F 0%, #183C31 45%, #0A3323 100%)";
+
+    warningBorder = "rgba(92,141,69,0.7)";
+    warningGlow = "rgba(92,141,69,0.22)";
+  }
+
+  // ===================================================
+  // WARNING LABEL
+  // ===================================================
+
+  const warningLabel =
+    warningLevel === "CRITICAL"
+      ? "CRITICAL WARNING"
+      : warningLevel === "HIGH"
+      ? "ACTIVE WARNING"
+      : "NORMAL MONITORING";
+
+  const warningTitle =
+    warningLevel === "CRITICAL"
+      ? "Critical Landslide Risk Detected"
+      : warningLevel === "HIGH"
+      ? "High Landslide Risk Detected"
+      : "Low Landslide Risk Detected";
 
   return (
     <section
@@ -89,9 +250,13 @@ function EarlyWarning() {
         maxWidth: "1400px",
         margin: "0 auto",
         padding: "20px 40px 60px",
+        scrollMarginTop: "95px",
       }}
     >
-      {/* SECTION HEADING */}
+      {/* =================================================
+          SECTION HEADING
+      ================================================= */}
+
       <div style={{ marginBottom: "22px" }}>
         <p
           style={{
@@ -125,11 +290,48 @@ function EarlyWarning() {
         >
           Real-time risk alerts designed to support faster disaster response.
         </p>
+
+        {/* SELECTED ZONE */}
+
+        {selectedZone && (
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "10px",
+              marginTop: "14px",
+              padding: "8px 14px",
+              borderRadius: "10px",
+              background: "rgba(131,153,88,0.12)",
+              border: "1px solid rgba(131,153,88,0.3)",
+            }}
+          >
+            <span
+              style={{
+                color: "#F7F4D5",
+                fontSize: "12px",
+                fontWeight: "800",
+              }}
+            >
+              WARNING FOR: {selectedZone.name}
+            </span>
+
+            <span
+              style={{
+                color: "#839958",
+                fontSize: "11px",
+                fontWeight: "800",
+              }}
+            >
+              {selectedZone.id}
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* =====================================
-          MAIN DYNAMIC WARNING CARD
-      ===================================== */}
+      {/* =================================================
+          MAIN WARNING CARD
+      ================================================= */}
 
       <div
         style={{
@@ -140,11 +342,10 @@ function EarlyWarning() {
           boxShadow: `0 18px 45px rgba(0,0,0,0.22), 0 0 35px ${warningGlow}`,
           position: "relative",
           overflow: "hidden",
-          transition:
-            "background 0.6s ease, border 0.5s ease, box-shadow 0.5s ease",
         }}
       >
         {/* Dynamic Glow */}
+
         <div
           style={{
             position: "absolute",
@@ -155,21 +356,6 @@ function EarlyWarning() {
             right: "-90px",
             top: "-120px",
             filter: "blur(15px)",
-            transition: "background 0.5s ease",
-          }}
-        />
-
-        {/* Second Glow */}
-        <div
-          style={{
-            position: "absolute",
-            width: "180px",
-            height: "180px",
-            borderRadius: "50%",
-            background: warningGlow,
-            left: "-100px",
-            bottom: "-100px",
-            filter: "blur(20px)",
           }}
         />
 
@@ -183,9 +369,13 @@ function EarlyWarning() {
             zIndex: 1,
           }}
         >
-          {/* LEFT SIDE */}
+          {/* =================================================
+              LEFT SIDE
+          ================================================= */}
+
           <div>
-            {/* ACTIVE WARNING BADGE */}
+            {/* Warning Badge */}
+
             <div
               style={{
                 display: "inline-flex",
@@ -196,8 +386,6 @@ function EarlyWarning() {
                 padding: "9px 14px",
                 borderRadius: "999px",
                 marginBottom: "18px",
-                transition:
-                  "background 0.4s ease, border 0.4s ease",
               }}
             >
               <span
@@ -208,7 +396,7 @@ function EarlyWarning() {
                   background: warningColor,
                   boxShadow: `0 0 14px ${warningColor}`,
                   animation:
-                    riskScore >= 70
+                    warningLevel !== "LOW"
                       ? "warningPulse 1.5s infinite"
                       : "none",
                 }}
@@ -222,15 +410,12 @@ function EarlyWarning() {
                   letterSpacing: "1.4px",
                 }}
               >
-                {warningLevel === "HIGH"
-                  ? "ACTIVE WARNING"
-                  : warningLevel === "MEDIUM"
-                  ? "MONITORING ALERT"
-                  : "NORMAL MONITORING"}
+                {warningLabel}
               </span>
             </div>
 
-            {/* TITLE */}
+            {/* Title */}
+
             <h3
               style={{
                 color: "#F7F4D5",
@@ -239,14 +424,11 @@ function EarlyWarning() {
                 fontWeight: "850",
               }}
             >
-              {warningLevel === "HIGH"
-                ? "High Landslide Risk Detected"
-                : warningLevel === "MEDIUM"
-                ? "Moderate Landslide Risk Detected"
-                : "Low Landslide Risk Detected"}
+              {warningTitle}
             </h3>
 
-            {/* DYNAMIC MESSAGE */}
+            {/* Message */}
+
             <p
               style={{
                 color: "#D2D7C5",
@@ -256,10 +438,13 @@ function EarlyWarning() {
                 marginBottom: "22px",
               }}
             >
-              {warningMessage}
+              {warning.warningMessage}
             </p>
 
-            {/* WARNING METADATA */}
+            {/* =================================================
+                WARNING METADATA
+            ================================================= */}
+
             <div
               style={{
                 display: "flex",
@@ -267,11 +452,13 @@ function EarlyWarning() {
                 gap: "12px",
               }}
             >
-              {/* AFFECTED AREA */}
+              {/* Affected Area */}
+
               <div
                 style={{
                   background: "rgba(247,244,213,0.07)",
-                  border: "1px solid rgba(247,244,213,0.12)",
+                  border:
+                    "1px solid rgba(247,244,213,0.12)",
                   borderRadius: "12px",
                   padding: "11px 15px",
                 }}
@@ -294,15 +481,50 @@ function EarlyWarning() {
                     fontSize: "14px",
                   }}
                 >
-                  Zone A
+                  {selectedZone?.name || "Zone A"}
                 </strong>
               </div>
 
-              {/* STATUS */}
+              {/* Zone ID */}
+
               <div
                 style={{
                   background: "rgba(247,244,213,0.07)",
-                  border: "1px solid rgba(247,244,213,0.12)",
+                  border:
+                    "1px solid rgba(247,244,213,0.12)",
+                  borderRadius: "12px",
+                  padding: "11px 15px",
+                }}
+              >
+                <span
+                  style={{
+                    color: "#839958",
+                    fontSize: "11px",
+                    fontWeight: "800",
+                    display: "block",
+                    marginBottom: "4px",
+                  }}
+                >
+                  ZONE ID
+                </span>
+
+                <strong
+                  style={{
+                    color: "#F7F4D5",
+                    fontSize: "14px",
+                  }}
+                >
+                  {selectedZone?.id || "ZONE_10452"}
+                </strong>
+              </div>
+
+              {/* Status */}
+
+              <div
+                style={{
+                  background: "rgba(247,244,213,0.07)",
+                  border:
+                    "1px solid rgba(247,244,213,0.12)",
                   borderRadius: "12px",
                   padding: "11px 15px",
                 }}
@@ -329,11 +551,13 @@ function EarlyWarning() {
                 </strong>
               </div>
 
-              {/* LAST CHECK */}
+              {/* Last Check */}
+
               <div
                 style={{
                   background: "rgba(247,244,213,0.07)",
-                  border: "1px solid rgba(247,244,213,0.12)",
+                  border:
+                    "1px solid rgba(247,244,213,0.12)",
                   borderRadius: "12px",
                   padding: "11px 15px",
                 }}
@@ -356,15 +580,15 @@ function EarlyWarning() {
                     fontSize: "14px",
                   }}
                 >
-                  2 min ago
+                  {warning.lastCheck}
                 </strong>
               </div>
             </div>
           </div>
 
-          {/* =====================================
-              RISK SCORE CIRCLE
-          ===================================== */}
+          {/* =================================================
+              RISK SCORE
+          ================================================= */}
 
           <div
             style={{
@@ -386,8 +610,6 @@ function EarlyWarning() {
                 alignItems: "center",
                 justifyContent: "center",
                 boxShadow: `0 0 35px ${warningGlow}`,
-                transition:
-                  "background 0.5s ease, box-shadow 0.5s ease",
               }}
             >
               <div
@@ -400,7 +622,8 @@ function EarlyWarning() {
                   flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
-                  border: "1px solid rgba(247,244,213,0.1)",
+                  border:
+                    "1px solid rgba(247,244,213,0.1)",
                 }}
               >
                 <span
@@ -442,9 +665,9 @@ function EarlyWarning() {
         </div>
       </div>
 
-      {/* =====================================
+      {/* =================================================
           DETECTED CONDITIONS
-      ===================================== */}
+      ================================================= */}
 
       <div style={{ marginTop: "22px" }}>
         <h3
@@ -460,21 +683,21 @@ function EarlyWarning() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns:
+              "repeat(3, 1fr)",
             gap: "16px",
           }}
         >
-          {conditions.map((condition) => (
+          {warning.conditions.map((condition) => (
             <div
               key={condition.title}
               style={{
                 background:
                   "linear-gradient(145deg, rgba(16,86,102,0.88), rgba(10,51,35,0.94))",
-                border: "1px solid rgba(131,153,88,0.25)",
+                border:
+                  "1px solid rgba(131,153,88,0.25)",
                 borderRadius: "17px",
                 padding: "20px",
-                transition:
-                  "transform 0.25s ease, border 0.25s ease",
               }}
             >
               <div
@@ -493,7 +716,6 @@ function EarlyWarning() {
                   style={{
                     color: warningColor,
                     fontSize: "20px",
-                    transition: "color 0.4s ease",
                   }}
                 >
                   {condition.value}
@@ -525,9 +747,9 @@ function EarlyWarning() {
         </div>
       </div>
 
-      {/* =====================================
+      {/* =================================================
           ACTION AREA
-      ===================================== */}
+      ================================================= */}
 
       <div
         style={{
@@ -536,8 +758,6 @@ function EarlyWarning() {
           border: `1px solid ${warningColor}35`,
           borderRadius: "18px",
           padding: "22px",
-          transition:
-            "background 0.5s ease, border 0.5s ease",
         }}
       >
         <div
@@ -569,11 +789,7 @@ function EarlyWarning() {
                 fontSize: "18px",
               }}
             >
-              {warningLevel === "HIGH"
-                ? "Increase monitoring and prepare emergency response teams."
-                : warningLevel === "MEDIUM"
-                ? "Continue close monitoring and keep response teams prepared."
-                : "Continue routine monitoring of environmental conditions."}
+              {warning.action}
             </h3>
 
             <p
@@ -583,16 +799,15 @@ function EarlyWarning() {
                 fontSize: "13px",
               }}
             >
-              {warningLevel === "HIGH"
-                ? "Authorities should verify field conditions and remain prepared for possible evacuation measures."
-                : warningLevel === "MEDIUM"
-                ? "Authorities should continue observing rainfall, soil moisture and slope conditions."
-                : "No immediate emergency action is required based on the current risk assessment."}
+              {warning.actionDetails}
             </p>
           </div>
 
           <button
-            onClick={() => setShowDetails(!showDetails)}
+            type="button"
+            onClick={() =>
+              setShowDetails(!showDetails)
+            }
             style={{
               border: "none",
               borderRadius: "12px",
@@ -611,9 +826,9 @@ function EarlyWarning() {
           </button>
         </div>
 
-        {/* =====================================
+        {/* =================================================
             EXPANDABLE DETAILS
-        ===================================== */}
+        ================================================= */}
 
         {showDetails && (
           <div
@@ -623,7 +838,8 @@ function EarlyWarning() {
               borderTop:
                 "1px solid rgba(247,244,213,0.12)",
               display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
+              gridTemplateColumns:
+                "repeat(3, 1fr)",
               gap: "14px",
             }}
           >
@@ -667,7 +883,7 @@ function EarlyWarning() {
                   margin: "5px 0 0",
                 }}
               >
-                91%
+                {warning.confidence}%
               </p>
             </div>
 
@@ -690,18 +906,17 @@ function EarlyWarning() {
                   margin: "5px 0 0",
                 }}
               >
-                {warningLevel === "HIGH"
-                  ? "CRITICAL"
-                  : warningLevel === "MEDIUM"
-                  ? "HIGH"
-                  : "NORMAL"}
+                {warning.responsePriority}
               </p>
             </div>
           </div>
         )}
       </div>
 
-      {/* DEMO NOTICE */}
+      {/* =================================================
+          DEMO NOTICE
+      ================================================= */}
+
       <p
         style={{
           color: "#7F8C72",
@@ -714,7 +929,10 @@ function EarlyWarning() {
         will be connected to the backend prediction service.
       </p>
 
-      {/* ANIMATION */}
+      {/* =================================================
+          ANIMATION
+      ================================================= */}
+
       <style>
         {`
           @keyframes warningPulse {

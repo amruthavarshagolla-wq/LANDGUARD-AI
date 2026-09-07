@@ -1,49 +1,196 @@
 import { useState } from "react";
 
-function ImpactAnalysis() {
+function ImpactAnalysis({ selectedZone }) {
   const [selectedCategory, setSelectedCategory] = useState("ALL");
 
-  const impactData = {
-    population: 78,
-    infrastructure: 65,
-    transportation: 54,
-    agriculture: 42,
+  // --------------------------------------------------
+  // DEMO IMPACT DATA BY ZONE
+  // Later this will come from GET /api/impact?zoneId=...
+  // --------------------------------------------------
+
+  const impactDataByZone = {
+    ZONE_10452: {
+      impactScore: 86,
+      impactLevel: "Very High Impact",
+      responsePriority: "CRITICAL",
+
+      population: {
+        value: "12,450",
+        percentage: 78,
+      },
+
+      infrastructure: {
+        value: "3",
+        percentage: 65,
+      },
+
+      transportation: {
+        value: "14",
+        percentage: 54,
+      },
+
+      agriculture: {
+        value: "42%",
+        percentage: 42,
+      },
+
+      responseStatus: [
+        ["Population Exposure", "HIGH"],
+        ["Infrastructure Risk", "HIGH"],
+        ["Road Accessibility", "MEDIUM"],
+        ["Agricultural Impact", "MEDIUM"],
+      ],
+    },
+
+    ZONE_10453: {
+      impactScore: 71,
+      impactLevel: "High Impact",
+      responsePriority: "HIGH",
+
+      population: {
+        value: "8,720",
+        percentage: 64,
+      },
+
+      infrastructure: {
+        value: "5",
+        percentage: 58,
+      },
+
+      transportation: {
+        value: "21",
+        percentage: 67,
+      },
+
+      agriculture: {
+        value: "35%",
+        percentage: 35,
+      },
+
+      responseStatus: [
+        ["Population Exposure", "HIGH"],
+        ["Infrastructure Risk", "HIGH"],
+        ["Road Accessibility", "HIGH"],
+        ["Agricultural Impact", "MEDIUM"],
+      ],
+    },
+
+    ZONE_10454: {
+      impactScore: 34,
+      impactLevel: "Low Impact",
+      responsePriority: "NORMAL",
+
+      population: {
+        value: "2,180",
+        percentage: 28,
+      },
+
+      infrastructure: {
+        value: "1",
+        percentage: 22,
+      },
+
+      transportation: {
+        value: "7",
+        percentage: 24,
+      },
+
+      agriculture: {
+        value: "18%",
+        percentage: 18,
+      },
+
+      responseStatus: [
+        ["Population Exposure", "LOW"],
+        ["Infrastructure Risk", "LOW"],
+        ["Road Accessibility", "LOW"],
+        ["Agricultural Impact", "LOW"],
+      ],
+    },
   };
+
+  // --------------------------------------------------
+  // DEFAULT DATA
+  // Used when no zone has been selected yet.
+  // --------------------------------------------------
+
+  const defaultImpactData = {
+    impactScore: 86,
+    impactLevel: "Very High Impact",
+    responsePriority: "CRITICAL",
+
+    population: {
+      value: "12,450",
+      percentage: 78,
+    },
+
+    infrastructure: {
+      value: "3",
+      percentage: 65,
+    },
+
+    transportation: {
+      value: "14",
+      percentage: 54,
+    },
+
+    agriculture: {
+      value: "42%",
+      percentage: 42,
+    },
+
+    responseStatus: [
+      ["Population Exposure", "HIGH"],
+      ["Infrastructure Risk", "HIGH"],
+      ["Road Accessibility", "MEDIUM"],
+      ["Agricultural Impact", "MEDIUM"],
+    ],
+  };
+
+  const currentImpact =
+    impactDataByZone[selectedZone?.id] || defaultImpactData;
 
   const categories = [
     {
       key: "population",
       label: "Population",
       icon: "👥",
-      value: "12,450",
+      value: currentImpact.population.value,
       description: "People potentially exposed",
-      percentage: impactData.population,
+      percentage: currentImpact.population.percentage,
     },
+
     {
       key: "infrastructure",
       label: "Infrastructure",
       icon: "🏥",
-      value: "3",
+      value: currentImpact.infrastructure.value,
       description: "Critical facilities at risk",
-      percentage: impactData.infrastructure,
+      percentage: currentImpact.infrastructure.percentage,
     },
+
     {
       key: "transportation",
       label: "Transportation",
       icon: "🛣️",
-      value: "14",
+      value: currentImpact.transportation.value,
       description: "Road segments at risk",
-      percentage: impactData.transportation,
+      percentage: currentImpact.transportation.percentage,
     },
+
     {
       key: "agriculture",
       label: "Agriculture",
       icon: "🌾",
-      value: "42%",
+      value: currentImpact.agriculture.value,
       description: "Agricultural exposure",
-      percentage: impactData.agriculture,
+      percentage: currentImpact.agriculture.percentage,
     },
   ];
+
+  // --------------------------------------------------
+  // RESPONSE ACTIONS
+  // --------------------------------------------------
 
   const responseActions = [
     {
@@ -53,6 +200,7 @@ function ImpactAnalysis() {
         "Activate emergency response teams and prepare evacuation resources for high-risk zones.",
       icon: "🚨",
     },
+
     {
       priority: "HIGH",
       title: "Monitor Critical Infrastructure",
@@ -60,13 +208,15 @@ function ImpactAnalysis() {
         "Increase monitoring around hospitals, roads and other essential infrastructure.",
       icon: "🏥",
     },
+
     {
       priority: "HIGH",
       title: "Review Evacuation Routes",
       description:
-        "Check alternate transportation routes in areas where roads are exposed to landslide risk.",
+        "Review evacuation routes and road accessibility in areas exposed to landslide risk.",
       icon: "🛣️",
     },
+
     {
       priority: "MEDIUM",
       title: "Continue Field Monitoring",
@@ -80,16 +230,19 @@ function ImpactAnalysis() {
     selectedCategory === "ALL"
       ? responseActions
       : responseActions.filter((action) => {
-          if (selectedCategory === "CRITICAL") {
-            return action.priority === "CRITICAL";
-          }
-
-          if (selectedCategory === "HIGH") {
-            return action.priority === "HIGH";
-          }
-
           return action.priority === selectedCategory;
         });
+
+  // --------------------------------------------------
+  // RESPONSE PRIORITY COLORS
+  // --------------------------------------------------
+
+  const priorityColor =
+    currentImpact.responsePriority === "CRITICAL"
+      ? "#D3968C"
+      : currentImpact.responsePriority === "HIGH"
+      ? "#D9A441"
+      : "#839958";
 
   return (
     <section
@@ -138,6 +291,56 @@ function ImpactAnalysis() {
         >
           Assess potential damage and prioritize emergency response actions.
         </p>
+
+        {/* SELECTED ZONE */}
+
+        {selectedZone && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "9px",
+              flexWrap: "wrap",
+              marginTop: "13px",
+            }}
+          >
+            <span
+              style={{
+                color: "#839958",
+                fontSize: "11px",
+                fontWeight: "900",
+                letterSpacing: "1px",
+              }}
+            >
+              ANALYZING ZONE:
+            </span>
+
+            <span
+              style={{
+                color: "#F7F4D5",
+                fontSize: "13px",
+                fontWeight: "800",
+              }}
+            >
+              {selectedZone.name}
+            </span>
+
+            <span
+              style={{
+                color: "#839958",
+                background: "rgba(131,153,88,0.12)",
+                border: "1px solid rgba(131,153,88,0.3)",
+                padding: "4px 9px",
+                borderRadius: "7px",
+                fontSize: "10px",
+                fontWeight: "900",
+                letterSpacing: "0.5px",
+              }}
+            >
+              {selectedZone.id}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* =====================================
@@ -211,7 +414,7 @@ function ImpactAnalysis() {
                   margin: "0 0 8px",
                 }}
               >
-                Very High Impact
+                {currentImpact.impactLevel}
               </h3>
 
               <p
@@ -223,8 +426,8 @@ function ImpactAnalysis() {
                   margin: 0,
                 }}
               >
-                Multiple population, infrastructure and transportation
-                assets are exposed to potential landslide impact.
+                Population, infrastructure, transportation and agricultural
+                assets are being assessed for potential landslide impact.
               </p>
 
               <div
@@ -235,8 +438,8 @@ function ImpactAnalysis() {
                   gap: "8px",
                   padding: "8px 12px",
                   borderRadius: "999px",
-                  background: "rgba(211,150,140,0.13)",
-                  border: "1px solid rgba(211,150,140,0.35)",
+                  background: `${priorityColor}20`,
+                  border: `1px solid ${priorityColor}55`,
                 }}
               >
                 <span
@@ -244,19 +447,20 @@ function ImpactAnalysis() {
                     width: "8px",
                     height: "8px",
                     borderRadius: "50%",
-                    background: "#D3968C",
-                    boxShadow: "0 0 10px rgba(211,150,140,0.8)",
+                    background: priorityColor,
+                    boxShadow: `0 0 10px ${priorityColor}`,
                   }}
                 />
 
                 <span
                   style={{
-                    color: "#D3968C",
+                    color: priorityColor,
                     fontSize: "11px",
                     fontWeight: "900",
                   }}
                 >
-                  RESPONSE PRIORITY: CRITICAL
+                  RESPONSE PRIORITY:{" "}
+                  {currentImpact.responsePriority}
                 </span>
               </div>
             </div>
@@ -268,12 +472,15 @@ function ImpactAnalysis() {
                 minWidth: "145px",
                 height: "145px",
                 borderRadius: "50%",
-                background:
-                  "conic-gradient(#D3968C 0deg 309.6deg, rgba(247,244,213,0.08) 309.6deg 360deg)",
+                background: `conic-gradient(${priorityColor} 0deg ${
+                  currentImpact.impactScore * 3.6
+                }deg, rgba(247,244,213,0.08) ${
+                  currentImpact.impactScore * 3.6
+                }deg 360deg)`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: "0 0 35px rgba(211,150,140,0.13)",
+                boxShadow: `0 0 35px ${priorityColor}22`,
               }}
             >
               <div
@@ -295,12 +502,12 @@ function ImpactAnalysis() {
                     lineHeight: 1,
                   }}
                 >
-                  86
+                  {currentImpact.impactScore}
                 </strong>
 
                 <span
                   style={{
-                    color: "#D3968C",
+                    color: priorityColor,
                     fontSize: "10px",
                     fontWeight: "900",
                     marginTop: "6px",
@@ -343,7 +550,11 @@ function ImpactAnalysis() {
               fontSize: "21px",
             }}
           >
-            🚨 Critical Priority
+            {currentImpact.responsePriority === "CRITICAL"
+              ? "🚨 Critical Priority"
+              : currentImpact.responsePriority === "HIGH"
+              ? "⚠️ High Priority"
+              : "✓ Normal Priority"}
           </h3>
 
           <div
@@ -353,12 +564,7 @@ function ImpactAnalysis() {
               gap: "13px",
             }}
           >
-            {[
-              ["Population Exposure", "HIGH"],
-              ["Infrastructure Risk", "HIGH"],
-              ["Road Accessibility", "MEDIUM"],
-              ["Agricultural Impact", "MEDIUM"],
-            ].map(([label, value]) => (
+            {currentImpact.responseStatus.map(([label, value]) => (
               <div
                 key={label}
                 style={{
@@ -384,7 +590,9 @@ function ImpactAnalysis() {
                     color:
                       value === "HIGH"
                         ? "#D3968C"
-                        : "#D9A441",
+                        : value === "MEDIUM"
+                        ? "#D9A441"
+                        : "#839958",
                     fontSize: "10px",
                   }}
                 >
@@ -659,9 +867,9 @@ function ImpactAnalysis() {
                 margin: 0,
               }}
             >
-              Population exposure is currently the dominant
-              impact factor, followed by critical infrastructure
-              and transportation accessibility.
+              Population, infrastructure, transportation and
+              agricultural exposure are being evaluated for the
+              selected zone to support authority response decisions.
             </p>
           </div>
         </div>
@@ -812,7 +1020,9 @@ function ImpactAnalysis() {
                         color:
                           action.priority === "CRITICAL"
                             ? "#D3968C"
-                            : "#D9A441",
+                            : action.priority === "HIGH"
+                            ? "#D9A441"
+                            : "#839958",
                         fontSize: "9px",
                         fontWeight: "900",
                       }}
@@ -864,7 +1074,8 @@ function ImpactAnalysis() {
         }}
       >
         * Impact values currently use demonstration data and
-        will later be connected to GET /api/impact.
+        will later be connected to GET /api/impact using the
+        selected Zone ID.
       </p>
     </section>
   );

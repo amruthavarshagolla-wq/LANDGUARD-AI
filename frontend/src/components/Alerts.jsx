@@ -1,93 +1,100 @@
 import { useState } from "react";
 
-function Alerts() {
+function Alerts({ selectedZone }) {
   const [filter, setFilter] = useState("ALL");
 
   // Demo alert data.
   // Later this will come from the backend API.
+  //
+  // IMPORTANT:
+  // These zone IDs are the same IDs used by the GIS map,
+  // Risk Prediction and Early Warning modules.
+
   const alerts = [
     {
       id: 1,
       title: "Heavy Rainfall Detected",
       severity: "CRITICAL",
       zone: "Zone A",
+      zoneId: "ZONE_10452",
       score: 92,
       message:
         "Heavy rainfall has been detected in a high-risk region. Immediate monitoring is required.",
       time: "2 min ago",
       status: "ACTIVE",
     },
+
     {
       id: 2,
       title: "High Soil Moisture",
       severity: "HIGH",
       zone: "Zone B",
+      zoneId: "ZONE_10453",
       score: 84,
       message:
         "Ground saturation is significantly elevated and may contribute to slope instability.",
       time: "8 min ago",
       status: "ACTIVE",
     },
+
     {
       id: 3,
       title: "Slope Instability Detected",
       severity: "MEDIUM",
       zone: "Zone C",
+      zoneId: "ZONE_10454",
       score: 64,
       message:
         "Terrain analysis indicates increasing slope instability. Continue field observation.",
       time: "15 min ago",
       status: "MONITORING",
     },
+
     {
       id: 4,
-      title: "No Immediate Threat",
-      severity: "LOW",
-      zone: "Zone D",
-      score: 24,
-      message:
-        "Current environmental conditions remain within the normal monitoring range.",
-      time: "28 min ago",
-      status: "NORMAL",
-    },
-    {
-      id: 5,
       title: "Rainfall Increasing",
       severity: "HIGH",
       zone: "Zone A",
+      zoneId: "ZONE_10452",
       score: 79,
       message:
         "Rainfall intensity is increasing and requires continued observation.",
       time: "35 min ago",
       status: "ACTIVE",
     },
+
     {
-      id: 6,
+      id: 5,
       title: "Ground Saturation Rising",
       severity: "MEDIUM",
       zone: "Zone B",
+      zoneId: "ZONE_10453",
       score: 58,
       message:
         "Soil moisture levels are gradually increasing across the monitored region.",
       time: "42 min ago",
       status: "MONITORING",
     },
+
     {
-      id: 7,
+      id: 6,
       title: "Stable Conditions",
       severity: "LOW",
       zone: "Zone C",
+      zoneId: "ZONE_10454",
       score: 21,
       message:
         "No significant environmental changes have been detected.",
       time: "1 hr ago",
       status: "NORMAL",
     },
+
     {
-      id: 8,
+      id: 7,
       title: "Terrain Movement Detected",
       severity: "CRITICAL",
       zone: "Zone B",
+      zoneId: "ZONE_10453",
       score: 95,
       message:
         "Potential ground movement has been detected. Field verification is recommended immediately.",
@@ -145,37 +152,52 @@ function Alerts() {
   };
 
   // -----------------------------------------
-  // FILTER ALERTS
+  // SELECT ALERTS FOR CURRENT ZONE
+  // -----------------------------------------
+
+  const zoneAlerts = selectedZone
+    ? alerts.filter((alert) => alert.zoneId === selectedZone.id)
+    : alerts;
+
+  // -----------------------------------------
+  // FILTER BY ZONE + SEVERITY
   // -----------------------------------------
 
   const filteredAlerts =
     filter === "ALL"
-      ? alerts
-      : alerts.filter((alert) => alert.severity === filter);
+      ? zoneAlerts
+      : zoneAlerts.filter((alert) => alert.severity === filter);
 
   // -----------------------------------------
   // SUMMARY COUNTS
   // -----------------------------------------
 
-  const criticalCount = alerts.filter(
+  const criticalCount = zoneAlerts.filter(
     (alert) => alert.severity === "CRITICAL"
   ).length;
 
-  const highCount = alerts.filter(
+  const highCount = zoneAlerts.filter(
     (alert) => alert.severity === "HIGH"
   ).length;
 
-  const mediumCount = alerts.filter(
+  const mediumCount = zoneAlerts.filter(
     (alert) => alert.severity === "MEDIUM"
   ).length;
 
-  const lowCount = alerts.filter(
+  const lowCount = zoneAlerts.filter(
     (alert) => alert.severity === "LOW"
   ).length;
 
-  const activeCount = alerts.filter(
+  const activeAlerts = zoneAlerts.filter(
     (alert) => alert.status === "ACTIVE"
-  ).length;
+  );
+
+  const activeCount = activeAlerts.length;
+
+  // Unique Zone IDs among active alerts
+  const activeZoneIds = [
+    ...new Set(activeAlerts.map((alert) => alert.zoneId)),
+  ];
 
   return (
     <section
@@ -238,9 +260,60 @@ function Alerts() {
             >
               Monitor, prioritize and respond to landslide-related alerts.
             </p>
+
+            {/* SELECTED ZONE */}
+
+            {selectedZone && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "9px",
+                  marginTop: "12px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <span
+                  style={{
+                    color: "#839958",
+                    fontSize: "11px",
+                    fontWeight: "900",
+                    letterSpacing: "1px",
+                  }}
+                >
+                  ALERTS FOR:
+                </span>
+
+                <span
+                  style={{
+                    color: "#F7F4D5",
+                    fontSize: "13px",
+                    fontWeight: "800",
+                  }}
+                >
+                  {selectedZone.name}
+                </span>
+
+                <span
+                  style={{
+                    color: "#839958",
+                    background: "rgba(131,153,88,0.12)",
+                    border: "1px solid rgba(131,153,88,0.3)",
+                    padding: "4px 8px",
+                    borderRadius: "7px",
+                    fontSize: "10px",
+                    fontWeight: "800",
+                    letterSpacing: "0.5px",
+                  }}
+                >
+                  {selectedZone.id}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* LIVE STATUS */}
+
           <div
             style={{
               display: "flex",
@@ -289,6 +362,7 @@ function Alerts() {
         }}
       >
         {/* ACTIVE */}
+
         <div
           style={{
             background:
@@ -318,10 +392,28 @@ function Alerts() {
             }}
           >
             {activeCount}
+
+            {/* ACTIVE ZONE IDS */}
+
+            {activeZoneIds.length > 0 && (
+              <div
+                style={{
+                  marginTop: "8px",
+                  color: "#B8C3A0",
+                  fontSize: "9px",
+                  lineHeight: "1.6",
+                  fontWeight: "700",
+                  wordBreak: "break-word",
+                }}
+              >
+                {activeZoneIds.join(" • ")}
+              </div>
+            )}
           </div>
         </div>
 
         {/* CRITICAL */}
+
         <div
           style={{
             background:
@@ -355,6 +447,7 @@ function Alerts() {
         </div>
 
         {/* HIGH */}
+
         <div
           style={{
             background:
@@ -388,6 +481,7 @@ function Alerts() {
         </div>
 
         {/* MEDIUM */}
+
         <div
           style={{
             background:
@@ -421,6 +515,7 @@ function Alerts() {
         </div>
 
         {/* LOW */}
+
         <div
           style={{
             background:
@@ -535,6 +630,7 @@ function Alerts() {
                 }}
               >
                 {/* ICON */}
+
                 <div
                   style={{
                     width: "52px",
@@ -552,6 +648,7 @@ function Alerts() {
                 </div>
 
                 {/* ALERT INFORMATION */}
+
                 <div>
                   <div
                     style={{
@@ -606,6 +703,8 @@ function Alerts() {
                       gap: "8px",
                     }}
                   >
+                    {/* ZONE NAME */}
+
                     <span
                       style={{
                         color: "#839958",
@@ -618,6 +717,24 @@ function Alerts() {
                       📍 {alert.zone}
                     </span>
 
+                    {/* ZONE ID */}
+
+                    <span
+                      style={{
+                        color: "#839958",
+                        fontSize: "11px",
+                        background: "rgba(131,153,88,0.1)",
+                        border: "1px solid rgba(131,153,88,0.18)",
+                        padding: "5px 8px",
+                        borderRadius: "7px",
+                        fontWeight: "800",
+                      }}
+                    >
+                      ID: {alert.zoneId}
+                    </span>
+
+                    {/* TIME */}
+
                     <span
                       style={{
                         color: "#839958",
@@ -629,6 +746,8 @@ function Alerts() {
                     >
                       🕒 {alert.time}
                     </span>
+
+                    {/* STATUS */}
 
                     <span
                       style={{
@@ -646,6 +765,7 @@ function Alerts() {
                 </div>
 
                 {/* RISK SCORE */}
+
                 <div
                   style={{
                     textAlign: "center",
@@ -686,6 +806,7 @@ function Alerts() {
               </div>
 
               {/* RISK PROGRESS */}
+
               <div
                 style={{
                   marginTop: "16px",
@@ -711,7 +832,10 @@ function Alerts() {
         })}
       </div>
 
-      {/* EMPTY STATE */}
+      {/* =====================================
+          EMPTY STATE
+      ===================================== */}
+
       {filteredAlerts.length === 0 && (
         <div
           style={{
@@ -743,12 +867,15 @@ function Alerts() {
               fontSize: "13px",
             }}
           >
-            There are no alerts matching the selected severity.
+            {selectedZone
+              ? `There are no alerts for ${selectedZone.name} (${selectedZone.id}) matching the selected severity.`
+              : "There are no alerts matching the selected severity."}
           </p>
         </div>
       )}
 
       {/* DEMO NOTICE */}
+
       <p
         style={{
           color: "#7F8C72",

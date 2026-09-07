@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-function OfflineMode() {
+function OfflineMode({ selectedZone }) {
   const [isOnline, setIsOnline] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState("10 minutes ago");
@@ -64,6 +64,63 @@ function OfflineMode() {
         >
           Continue field operations even when network connectivity is limited.
         </p>
+
+        {/* Selected Zone */}
+
+        {selectedZone && (
+          <div
+            style={{
+              marginTop: "15px",
+              padding: "12px 16px",
+              borderRadius: "12px",
+              background: "rgba(74,222,128,0.08)",
+              border: "1px solid rgba(74,222,128,0.2)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "15px",
+              flexWrap: "wrap",
+            }}
+          >
+            <div>
+              <span
+                style={{
+                  color: "#86efac",
+                  fontSize: "10px",
+                  fontWeight: "bold",
+                  letterSpacing: "1.5px",
+                }}
+              >
+                FIELD OPERATIONS FOR
+              </span>
+
+              <div
+                style={{
+                  color: "#ffffff",
+                  fontSize: "16px",
+                  fontWeight: "bold",
+                  marginTop: "4px",
+                }}
+              >
+                {selectedZone.name}
+              </div>
+            </div>
+
+            <div
+              style={{
+                color: "#4ade80",
+                fontSize: "12px",
+                fontWeight: "bold",
+                padding: "7px 12px",
+                borderRadius: "8px",
+                background: "rgba(74,222,128,0.1)",
+                border: "1px solid rgba(74,222,128,0.2)",
+              }}
+            >
+              ZONE ID: {selectedZone.id}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ================= MAIN CARD ================= */}
@@ -109,6 +166,18 @@ function OfflineMode() {
             >
               Network and synchronization information
             </p>
+
+            {selectedZone && (
+              <p
+                style={{
+                  color: "#4ade80",
+                  fontSize: "11px",
+                  marginTop: "5px",
+                }}
+              >
+                Zone ID: {selectedZone.id}
+              </p>
+            )}
           </div>
 
           {/* Online / Offline Toggle */}
@@ -225,6 +294,18 @@ function OfflineMode() {
             >
               Data synchronization status
             </p>
+
+            {selectedZone && (
+              <p
+                style={{
+                  color: "#4ade80",
+                  fontSize: "10px",
+                  marginTop: "5px",
+                }}
+              >
+                Zone: {selectedZone.id}
+              </p>
+            )}
           </div>
 
           {/* Pending Reports */}
@@ -329,6 +410,20 @@ function OfflineMode() {
                 be stored locally and synchronized when the network becomes
                 available.
               </p>
+
+              {selectedZone && (
+                <p
+                  style={{
+                    color: "#93c5fd",
+                    fontSize: "11px",
+                    marginTop: "10px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  📍 Offline reports will be associated with Zone ID:{" "}
+                  {selectedZone.id}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -365,6 +460,18 @@ function OfflineMode() {
             >
               Sync pending field reports with the central system.
             </p>
+
+            {selectedZone && (
+              <p
+                style={{
+                  color: "#4ade80",
+                  fontSize: "11px",
+                  marginTop: "5px",
+                }}
+              >
+                Synchronizing data for Zone ID: {selectedZone.id}
+              </p>
+            )}
           </div>
 
           <button
