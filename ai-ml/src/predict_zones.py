@@ -2,9 +2,9 @@ import pandas as pd
 import numpy as np
 import joblib
 
-MODEL_FILE = "models/landslide_model.joblib"
-INPUT_FILE = "data/processed/zone_training_data_augmented.csv"
-OUTPUT_FILE = "data/processed/zone_predictions_augmented.csv"
+MODEL_FILE = "model/landslide_model.joblib"
+INPUT_FILE = "data/zone_training_data_augmented.csv"
+OUTPUT_FILE = "data/zone_predictions_augmented.csv"
 
 
 # Load upgraded dataset
