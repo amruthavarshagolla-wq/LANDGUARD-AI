@@ -2,7 +2,29 @@ import { useEffect, useState } from "react";
 import { getDashboardSummary } from "../lib/api";
 
 function Dashboard() {
+<<<<<<< HEAD
   const [riskScore, setRiskScore] = useState(38);
+=======
+  const [dashboardData, setDashboardData] = useState(null);
+
+useEffect(() => {
+  fetch("/api/dashboard")
+    .then((response) => response.json())
+    .then((result) => {
+      if (result.success) {
+        setDashboardData(result.data);
+      }
+    })
+    .catch((error) => {
+      console.error("Dashboard API error:", error);
+    });
+}, []);
+
+const riskScore = Number(
+  dashboardData?.risk_zones?.maximum_risk_score ?? 0
+);
+
+>>>>>>> 49090aa (Integrate dashboard with backend API)
   const [animatedScore, setAnimatedScore] = useState(0);
   const [stats, setStats] = useState([
     {
@@ -81,8 +103,6 @@ function Dashboard() {
     riskBorder = "rgba(131,153,88,0.5)";
     riskLabel = "LOW";
   }
-
-  return (
     <section
       style={{
         minHeight: "calc(100vh - 80px)",
