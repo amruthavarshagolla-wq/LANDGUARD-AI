@@ -3,7 +3,7 @@ import requests
 url = "http://127.0.0.1:5000/predict"
 
 data = {
-    "zone_id": "EKH_00000_00019",
+    "zone_id": "EKH_00019",
     "elevation_m": 1500,
     "slope_deg": 35,
     "aspect_deg": 180,
