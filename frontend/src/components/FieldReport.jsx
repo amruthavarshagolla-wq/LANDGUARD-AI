@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { submitFieldReport } from "../lib/api";
 
 function FieldReport() {
   const [formData, setFormData] = useState({
-    location: "",
+    location: "25.50, 91.89",
     severity: "MEDIUM",
     weather: "Clear",
     description: "",
@@ -32,18 +33,40 @@ function FieldReport() {
     setSubmitted(false);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Demo submission.
-    // Later this will send the data to:
-    // POST /api/reports
+    const fd = new FormData();
+    fd.append("report_type", "LANDSLIDE");
+    fd.append("description", formData.description || "Field observation report");
 
-    const generatedId =
-      "LG-" + Math.floor(100000 + Math.random() * 900000);
+    let lat = 25.50;
+    let lon = 91.89;
+    if (formData.location && formData.location.includes(",")) {
+      const parts = formData.location.split(",");
+      lat = parseFloat(parts[0].trim()) || 25.50;
+      lon = parseFloat(parts[1].trim()) || 91.89;
+    }
+    fd.append("latitude", lat.toString());
+    fd.append("longitude", lon.toString());
+    fd.append("severity", formData.severity || "MEDIUM");
+    if (image) {
+      fd.append("photo", image);
+    }
 
-    setReportId(generatedId);
-    setSubmitted(true);
+    try {
+      const res = await submitFieldReport(fd);
+      if (res && res.report) {
+        setReportId(res.report.report_id || `LG-${res.report.id}`);
+      } else {
+        setReportId("LG-" + Math.floor(100000 + Math.random() * 900000));
+      }
+      setSubmitted(true);
+    } catch (err) {
+      console.warn("Report submission failed, using local fallback ID:", err);
+      setReportId("LG-" + Math.floor(100000 + Math.random() * 900000));
+      setSubmitted(true);
+    }
   };
 
   const severityConfig = {

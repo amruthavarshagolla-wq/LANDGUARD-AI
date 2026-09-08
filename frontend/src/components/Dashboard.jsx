@@ -1,9 +1,44 @@
 import { useEffect, useState } from "react";
+import { getDashboardSummary } from "../lib/api";
 
 function Dashboard() {
-  const riskScore = 72;
-
+  const [riskScore, setRiskScore] = useState(38);
   const [animatedScore, setAnimatedScore] = useState(0);
+  const [stats, setStats] = useState([
+    {
+      icon: "🌍",
+      value: "22,615",
+      label: "Monitored Zones",
+      description: "East Khasi Hills grid cells",
+    },
+    {
+      icon: "🚨",
+      value: "2",
+      label: "Active Alerts",
+      description: "Requires attention",
+    },
+    {
+      icon: "🔴",
+      value: "142",
+      label: "Critical Zones",
+      description: "Immediate monitoring",
+    },
+  ]);
+
+  useEffect(() => {
+    getDashboardSummary()
+      .then((res) => {
+        if (res && res.data) {
+          if (res.data.average_risk_score !== undefined) {
+            setRiskScore(Math.round(res.data.average_risk_score));
+          }
+          if (res.data.stats && res.data.stats.length > 0) {
+            setStats(res.data.stats);
+          }
+        }
+      })
+      .catch((err) => console.warn("Dashboard summary fetch failed, using cached values:", err));
+  }, []);
 
   useEffect(() => {
     let current = 0;
@@ -20,7 +55,7 @@ function Dashboard() {
     }, 20);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [riskScore]);
 
   let riskColor;
   let riskBackground;
@@ -46,27 +81,6 @@ function Dashboard() {
     riskBorder = "rgba(131,153,88,0.5)";
     riskLabel = "LOW";
   }
-
-  const stats = [
-    {
-      icon: "🌍",
-      value: "128",
-      label: "Areas Monitored",
-      description: "GIS monitored regions",
-    },
-    {
-      icon: "🚨",
-      value: "8",
-      label: "Active Alerts",
-      description: "Requires attention",
-    },
-    {
-      icon: "🔴",
-      value: "3",
-      label: "Critical Zones",
-      description: "Immediate monitoring",
-    },
-  ];
 
   return (
     <section

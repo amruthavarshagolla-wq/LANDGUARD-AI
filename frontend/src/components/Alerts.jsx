@@ -1,100 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getAlerts } from "../lib/api";
 
 function Alerts() {
   const [filter, setFilter] = useState("ALL");
+  const [alerts, setAlerts] = useState([]);
 
-  // Demo alert data.
-  // Later this will come from the backend API.
-  const alerts = [
-    {
-      id: 1,
-      title: "Heavy Rainfall Detected",
-      severity: "CRITICAL",
-      zone: "Zone A",
-      score: 92,
-      message:
-        "Heavy rainfall has been detected in a high-risk region. Immediate monitoring is required.",
-      time: "2 min ago",
-      status: "ACTIVE",
-    },
-    {
-      id: 2,
-      title: "High Soil Moisture",
-      severity: "HIGH",
-      zone: "Zone B",
-      score: 84,
-      message:
-        "Ground saturation is significantly elevated and may contribute to slope instability.",
-      time: "8 min ago",
-      status: "ACTIVE",
-    },
-    {
-      id: 3,
-      title: "Slope Instability Detected",
-      severity: "MEDIUM",
-      zone: "Zone C",
-      score: 64,
-      message:
-        "Terrain analysis indicates increasing slope instability. Continue field observation.",
-      time: "15 min ago",
-      status: "MONITORING",
-    },
-    {
-      id: 4,
-      title: "No Immediate Threat",
-      severity: "LOW",
-      zone: "Zone D",
-      score: 24,
-      message:
-        "Current environmental conditions remain within the normal monitoring range.",
-      time: "28 min ago",
-      status: "NORMAL",
-    },
-    {
-      id: 5,
-      title: "Rainfall Increasing",
-      severity: "HIGH",
-      zone: "Zone A",
-      score: 79,
-      message:
-        "Rainfall intensity is increasing and requires continued observation.",
-      time: "35 min ago",
-      status: "ACTIVE",
-    },
-    {
-      id: 6,
-      title: "Ground Saturation Rising",
-      severity: "MEDIUM",
-      zone: "Zone B",
-      score: 58,
-      message:
-        "Soil moisture levels are gradually increasing across the monitored region.",
-      time: "42 min ago",
-      status: "MONITORING",
-    },
-    {
-      id: 7,
-      title: "Stable Conditions",
-      severity: "LOW",
-      zone: "Zone C",
-      score: 21,
-      message:
-        "No significant environmental changes have been detected.",
-      time: "1 hr ago",
-      status: "NORMAL",
-    },
-    {
-      id: 8,
-      title: "Terrain Movement Detected",
-      severity: "CRITICAL",
-      zone: "Zone B",
-      score: 95,
-      message:
-        "Potential ground movement has been detected. Field verification is recommended immediately.",
-      time: "1 hr ago",
-      status: "ACTIVE",
-    },
-  ];
+  useEffect(() => {
+    getAlerts()
+      .then((res) => {
+        if (res && res.data) {
+          setAlerts(res.data);
+        }
+      })
+      .catch((err) => console.warn("Could not fetch live alerts:", err));
+  }, []);
+
 
   // -----------------------------------------
   // DYNAMIC SEVERITY CONFIGURATION

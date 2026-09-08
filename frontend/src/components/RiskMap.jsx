@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -10,45 +10,77 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { getRiskCurrent } from "../lib/api";
 
 function RiskMap() {
   const [selectedZone, setSelectedZone] = useState(null);
-
-  const zones = [
+  const [zones, setZones] = useState([
     {
-      id: "A",
-      name: "Zone A",
+      id: "EKH_08421",
+      name: "Zone EKH_08421",
       level: "CRITICAL",
-      score: 92,
-      rainfall: "Heavy",
+      score: 82,
+      rainfall: "210 mm",
       soilMoisture: "84%",
-      coordinates: [30.0668, 79.0193],
-      color: "#D3968C",
-      radius: 18000,
+      coordinates: [25.50, 91.89],
+      color: "#e74c3c",
+      radius: 900,
     },
     {
-      id: "B",
-      name: "Zone B",
+      id: "EKH_06120",
+      name: "Zone EKH_06120",
       level: "HIGH",
-      score: 78,
-      rainfall: "Moderate",
-      soilMoisture: "72%",
-      coordinates: [31.1048, 77.1734],
-      color: "#C47F72",
-      radius: 15000,
+      score: 68,
+      rainfall: "175 mm",
+      soilMoisture: "74%",
+      coordinates: [25.42, 91.82],
+      color: "#e67e22",
+      radius: 900,
     },
     {
-      id: "C",
-      name: "Zone C",
+      id: "EKH_03410",
+      name: "Zone EKH_03410",
       level: "LOW",
-      score: 28,
-      rainfall: "Low",
-      soilMoisture: "42%",
-      coordinates: [29.9457, 78.1642],
+      score: 22,
+      rainfall: "80 mm",
+      soilMoisture: "38%",
+      coordinates: [25.57, 91.95],
       color: "#839958",
-      radius: 12000,
+      radius: 900,
     },
-  ];
+  ]);
+
+  useEffect(() => {
+    getRiskCurrent("HIGH,VERY_HIGH")
+      .then((res) => {
+        if (res && res.features && res.features.length > 0) {
+          const mapped = res.features.slice(0, 35).map((f, i) => {
+            const props = f.properties || {};
+            const coords = f.geometry?.coordinates?.[0] || [[91.89, 25.50]];
+            const avgLon = coords.reduce((sum, c) => sum + c[0], 0) / coords.length;
+            const avgLat = coords.reduce((sum, c) => sum + c[1], 0) / coords.length;
+            const cat = props.risk_category || "HIGH";
+            const color = cat === "VERY_HIGH" ? "#e74c3c" : "#e67e22";
+
+            return {
+              id: props.zone_id || `Z-${i}`,
+              name: `Zone ${props.zone_id || i}`,
+              level: cat === "VERY_HIGH" ? "CRITICAL" : "HIGH",
+              score: Math.round(props.risk_score || 75),
+              rainfall: "Heavy",
+              soilMoisture: "Elevated",
+              coordinates: [avgLat, avgLon],
+              color: color,
+              radius: 950,
+            };
+          });
+          if (mapped.length > 0) {
+            setZones(mapped);
+          }
+        }
+      })
+      .catch((err) => console.warn("Live risk zones fetch failed, keeping baseline:", err));
+  }, []);
 
   const createRiskIcon = (zone) => {
     const pulseClass =
@@ -227,8 +259,8 @@ function RiskMap() {
         }}
       >
         <MapContainer
-          center={[30.5, 78.2]}
-          zoom={7}
+          center={[25.50, 91.89]}
+          zoom={10}
           zoomControl={false}
           style={{
             width: "100%",

@@ -1,39 +1,33 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getDashboardSummary } from "../lib/api";
 
 function ImpactAnalysis() {
   const [selectedCategory, setSelectedCategory] = useState("ALL");
 
-  const impactData = {
-    population: 78,
-    infrastructure: 65,
-    transportation: 54,
-    agriculture: 42,
-  };
-
-  const categories = [
+  const [categories, setCategories] = useState([
     {
       key: "population",
       label: "Population",
       icon: "👥",
-      value: "12,450",
+      value: "22,240",
       description: "People potentially exposed",
-      percentage: impactData.population,
+      percentage: 78,
     },
     {
       key: "infrastructure",
       label: "Infrastructure",
       icon: "🏥",
-      value: "3",
+      value: "74",
       description: "Critical facilities at risk",
-      percentage: impactData.infrastructure,
+      percentage: 65,
     },
     {
       key: "transportation",
       label: "Transportation",
       icon: "🛣️",
-      value: "14",
-      description: "Road segments at risk",
-      percentage: impactData.transportation,
+      value: "13,685",
+      description: "Road segments monitored",
+      percentage: 54,
     },
     {
       key: "agriculture",
@@ -41,9 +35,53 @@ function ImpactAnalysis() {
       icon: "🌾",
       value: "42%",
       description: "Agricultural exposure",
-      percentage: impactData.agriculture,
+      percentage: 42,
     },
-  ];
+  ]);
+
+  useEffect(() => {
+    getDashboardSummary()
+      .then((res) => {
+        if (res && res.data) {
+          const d = res.data;
+          setCategories([
+            {
+              key: "population",
+              label: "Population",
+              icon: "👥",
+              value: d.population_exposed ? d.population_exposed.toLocaleString() : "22,240",
+              description: "People in high-risk zones",
+              percentage: 78,
+            },
+            {
+              key: "infrastructure",
+              label: "Infrastructure",
+              icon: "🏥",
+              value: d.infrastructure ? d.infrastructure.total.toString() : "74",
+              description: "Hospitals & schools monitored",
+              percentage: 65,
+            },
+            {
+              key: "transportation",
+              label: "Transportation",
+              icon: "🛣️",
+              value: d.infrastructure ? d.infrastructure.road_segments.toLocaleString() : "13,685",
+              description: "Road segments monitored",
+              percentage: 54,
+            },
+            {
+              key: "agriculture",
+              label: "Agriculture",
+              icon: "🌾",
+              value: "42%",
+              description: "Sloping agricultural terrain",
+              percentage: 42,
+            },
+          ]);
+        }
+      })
+      .catch((err) => console.warn("Could not fetch impact summary:", err));
+  }, []);
 
   const responseActions = [
     {
