@@ -1,60 +1,36 @@
-"""
-explain.py
-==========
-PIPELINE STAGE: Explain Why
+"""Explainable operational-response reasoning for the M6 module.
 
-WHAT THIS ANSWERS:
-"Why did this zone get Priority=Critical and not some other zone?" —
-this is what you'll be asked live by judges, and what authorities need
-to trust the system instead of treating it as a black box.
-
-METHOD (deliberately simple, NOT SHAP or ML explainability):
-We already know each component's WEIGHTED CONTRIBUTION to the final
-priority score (weight x score). We rank those 4 contributions and
-describe the top 2 in plain language, using the breakdown dicts each
-scoring stage already produced. This is fully rule-based and 100%
-consistent with the score — there is no risk of the explanation
-disagreeing with the number, which is a real risk with post-hoc ML
-explainability methods.
-
-INPUT REQUIRED: all breakdown dicts + the final priority score/band/action
-
-OUTPUT: a short human-readable string, safe to show directly on the dashboard.
+The M6 module no longer computes a separate priority score or rank.  This
+file turns the rule reasons produced by ``actions.generate_operational_suggestions``
+into a short, dashboard-safe explanation.
 """
 
-from .config import PRIORITY_WEIGHTS
+
+def _join_with_and(items: list) -> str:
+    """Join one or more human-readable fragments naturally."""
+    if not items:
+        return ""
+    if len(items) == 1:
+        return items[0]
+    if len(items) == 2:
+        return f"{items[0]} and {items[1]}"
+    return ", ".join(items[:-1]) + f", and {items[-1]}"
 
 
-def generate_explanation(zone_id, risk_score, exposure_score, vulnerability_score,
-                          criticality_score, priority_score, priority_band,
-                          exposure_breakdown, vulnerability_breakdown, criticality_breakdown) -> str:
+def generate_operational_explanation(zone_id, reasons: list) -> str:
+    """Explain why the operational suggestions were generated.
 
-    contributions = {
-        "AI-predicted landslide risk": PRIORITY_WEIGHTS["risk"] * risk_score,
-        "population/asset exposure": PRIORITY_WEIGHTS["exposure"] * exposure_score,
-        "isolation/vulnerability": PRIORITY_WEIGHTS["vulnerability"] * vulnerability_score,
-        "critical infrastructure": PRIORITY_WEIGHTS["criticality"] * criticality_score,
-    }
-    ranked = sorted(contributions.items(), key=lambda kv: kv[1], reverse=True)
-    top_two = ranked[:2]
+    ``reasons`` comes directly from the same rule evaluation that generated
+    the suggestions, keeping the explanation consistent with the output.
+    """
+    if not reasons:
+        return (
+            f"Zone {zone_id}: no significant risk, exposure, infrastructure, "
+            "or field-report signals were found; routine monitoring is sufficient."
+        )
 
-    detail_bits = []
-    for factor_name, _ in top_two:
-        if factor_name == "AI-predicted landslide risk":
-            detail_bits.append(f"a risk score of {risk_score}/100 from the prediction model")
-        elif factor_name == "population/asset exposure":
-            pop = exposure_breakdown.get("population_exposed")
-            villages = exposure_breakdown.get("num_villages")
-            pop_txt = f"{pop} people" if pop is not None else "an unknown population (data missing)"
-            detail_bits.append(f"{pop_txt} across {villages} village(s) exposed")
-        elif factor_name == "isolation/vulnerability":
-            detail_bits.append(vulnerability_breakdown.get("accessibility_reason", "accessibility concerns"))
-        elif factor_name == "critical infrastructure":
-            asset = criticality_breakdown.get("max_weight_asset")
-            detail_bits.append(f"presence of critical infrastructure ({asset})" if asset else "critical infrastructure present")
-
-    explanation = (
-        f"Zone {zone_id} scored {priority_score}/100 -> Priority: {priority_band}. "
-        f"Main drivers: {', and '.join(detail_bits)}."
+    verb = "leads to" if len(reasons) == 1 else "combine to produce"
+    return (
+        f"Zone {zone_id}: {_join_with_and(reasons)} "
+        f"{verb} these operational suggestions."
     )
-    return explanation

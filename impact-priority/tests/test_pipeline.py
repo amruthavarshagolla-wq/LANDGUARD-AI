@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from src.exposure import compute_exposure_score
 from src.vulnerability import compute_vulnerability_score
 from src.criticality import compute_criticality_score
-from src.priority import compute_priority_score, classify_band
+from src.actions import generate_operational_suggestions
 from src.pipeline import run_pipeline
 
 
@@ -61,30 +61,112 @@ def test_criticality_hospital_outweighs_many_minor_roads():
     assert score_hospital > score_roads
 
 
-def test_priority_band_thresholds():
-    assert classify_band(85) == "Critical"
-    assert classify_band(65) == "High"
-    assert classify_band(40) == "Medium"
-    assert classify_band(10) == "Low"
+def test_operational_suggestions_high_risk_zone():
+    """Testing checklist item 1: high-risk zone -> appropriate operational suggestions."""
+    risk = {"zone_id": "Z1", "risk_score": 90, "risk_category": "Very High"}
+    gis = {"zone_id": "Z1"}
+    suggestions, reasons = generate_operational_suggestions(risk, gis, False, None)
+    assert "Conduct immediate field verification" in suggestions
+    assert "Increase monitoring frequency at this zone" in suggestions
+    assert any("risk" in r for r in reasons)
 
 
-def test_priority_score_missing_risk_uses_default_and_flags():
-    score, flags = compute_priority_score(None, 50, 50, 50, has_verified_field_report=False)
-    assert "risk_score_missing_used_default" in flags
-    assert 0 <= score <= 100
+def test_operational_suggestions_medium_risk_zone():
+    """Testing checklist item 2: medium-risk zone -> appropriate monitoring suggestions."""
+    risk = {"zone_id": "Z1", "risk_score": 45}
+    gis = {"zone_id": "Z1"}
+    suggestions, reasons = generate_operational_suggestions(risk, gis, False, None)
+    assert "Increase monitoring frequency at this zone" in suggestions
+    assert "Conduct immediate field verification" not in suggestions  # medium != high
+
+
+def test_operational_suggestions_low_risk_zone_no_signals():
+    risk = {"zone_id": "Z1", "risk_score": 10}
+    gis = {"zone_id": "Z1"}
+    suggestions, reasons = generate_operational_suggestions(risk, gis, False, None)
+    assert suggestions == ["Continue routine monitoring; no immediate operational action indicated"]
+    assert reasons == []
+
+
+def test_operational_suggestions_gis_infrastructure_present():
+    """Testing checklist item 3: GIS infrastructure present -> relevant infrastructure suggestion."""
+    risk = {"zone_id": "Z1", "risk_score": 10}
+    gis = {"zone_id": "Z1", "roads": [{"only_access": False}], "hospitals": 1}
+    suggestions, _ = generate_operational_suggestions(risk, gis, False, None)
+    assert "Inspect road and bridge accessibility in the zone" in suggestions
+    assert "Check accessibility to the nearby hospital" in suggestions
+
+
+def test_operational_suggestions_population_exposure():
+    """Testing checklist item 4: population exposure -> preparedness suggestion."""
+    risk = {"zone_id": "Z1", "risk_score": 10}
+    gis_high_pop = {"zone_id": "Z1", "population_exposed": 5000}
+    gis_low_pop = {"zone_id": "Z1", "population_exposed": 5}
+    suggestions_high, _ = generate_operational_suggestions(risk, gis_high_pop, False, None)
+    suggestions_low, _ = generate_operational_suggestions(risk, gis_low_pop, False, None)
+    assert "Prepare evacuation readiness assessment for the exposed population" in suggestions_high
+    assert "Prepare evacuation readiness assessment for the exposed population" not in suggestions_low
+
+
+def test_operational_suggestions_verified_field_report_escalation():
+    """Testing checklist item 5: verified high/critical field report -> escalation suggestion."""
+    risk = {"zone_id": "Z1", "risk_score": 10}
+    gis = {"zone_id": "Z1"}
+    suggestions, reasons = generate_operational_suggestions(risk, gis, True, "critical")
+    assert "Conduct immediate ground assessment" in suggestions
+    assert "Escalate for immediate authority review" in suggestions
+    assert any("verified" in r for r in reasons)
+
+    # unverified severe report must NOT escalate
+    suggestions_unverified, _ = generate_operational_suggestions(risk, gis, False, "critical")
+    assert "Conduct immediate ground assessment" not in suggestions_unverified
+
+
+def test_operational_suggestions_never_orders_autonomous_action():
+    """Suggestions must be decision-support wording, never an autonomous order."""
+    risk = {"zone_id": "Z1", "risk_score": 95, "risk_category": "Very High"}
+    gis = {"zone_id": "Z1", "population_exposed": 9000, "hospitals": 1,
+           "roads": [{"only_access": True, "alternate_route_exists": False}]}
+    suggestions, _ = generate_operational_suggestions(risk, gis, True, "critical")
+    for s in suggestions:
+        assert "evacuate everyone" not in s.lower()
+        assert "close the road" not in s.lower()
+
+
+def test_operational_suggestions_missing_optional_gis_fields_degrades_gracefully():
+    """Testing checklist item 7: missing optional GIS fields -> graceful handling, no crash."""
+    risk = {"zone_id": "Z1", "risk_score": 50}
+    gis = {"zone_id": "Z1"}  # no population/roads/bridges/hospitals/historical data at all
+    suggestions, reasons = generate_operational_suggestions(risk, gis, False, None)
+    assert isinstance(suggestions, list) and len(suggestions) >= 1  # never empty / never crashes
+
+
+def test_operational_suggestions_multiple_conditions_no_duplicates():
+    """Testing checklist item 8: multiple applicable conditions -> combined, no duplicate text."""
+    risk = {"zone_id": "Z1", "risk_score": 95, "risk_category": "Very High"}
+    gis = {
+        "zone_id": "Z1", "population_exposed": 3000, "hospitals": 1,
+        "roads": [{"only_access": True, "alternate_route_exists": False}],
+        "bridges": [{"only_access": True, "alternate_route_exists": False}],
+        "historical_landslide_count": 5,
+    }
+    suggestions, _ = generate_operational_suggestions(risk, gis, True, "high")
+    assert len(suggestions) == len(set(suggestions))  # no exact-text duplicates
 
 
 # ---------------------------------------------------------------------------
 # Integration / edge-case tests: full pipeline
 # ---------------------------------------------------------------------------
 
-def test_pipeline_runs_on_sample_data_and_ranks_correctly():
+def test_pipeline_runs_on_sample_data():
+    """Testing checklist item 9/10: existing AI JSON format + run_pipeline(data) still work."""
     risk = [{"zone_id": "Z1", "risk_score": 90}, {"zone_id": "Z2", "risk_score": 10}]
     gis = [{"zone_id": "Z1", "population_exposed": 1000}, {"zone_id": "Z2", "population_exposed": 10}]
     results = run_pipeline({"risk_data": risk, "gis_data": gis, "field_reports": []})
-    assert results[0]["zone_id"] == "Z1"  # higher risk+exposure should rank first
-    assert results[0]["priority_rank"] == 1
-    assert results[1]["priority_rank"] == 2
+    zone_ids = {r["zone_id"] for r in results}
+    assert zone_ids == {"Z1", "Z2"}
+    z1 = next(r for r in results if r["zone_id"] == "Z1")
+    assert "Conduct immediate field verification" in z1["operational_suggestions"]
 
 
 def test_pipeline_handles_zone_missing_from_gis():
@@ -93,7 +175,7 @@ def test_pipeline_handles_zone_missing_from_gis():
     results = run_pipeline({"risk_data": risk, "gis_data": gis, "field_reports": []})
     assert len(results) == 1
     assert "no_gis_data_for_zone" in results[0]["data_quality_flags"]
-    assert results[0]["priority_score"] >= 0  # must not crash
+    assert isinstance(results[0]["operational_suggestions"], list)  # must not crash
 
 
 def test_pipeline_handles_zone_missing_from_risk():
@@ -102,7 +184,12 @@ def test_pipeline_handles_zone_missing_from_risk():
     results = run_pipeline({"risk_data": risk, "gis_data": gis, "field_reports": []})
     assert len(results) == 1
     assert "no_risk_data_for_zone" in results[0]["data_quality_flags"]
-    assert "risk_score_missing_used_default" in results[0]["data_quality_flags"]
+    # M6 no longer invents/defaults a risk_score (that was priority.py's old
+    # behavior, and priority.py is no longer called) -- a missing risk_score
+    # simply means no risk-driven suggestion fires; it must not crash.
+    assert results[0]["risk_score"] is None
+    assert "Conduct immediate field verification" not in results[0]["operational_suggestions"]
+    assert isinstance(results[0]["operational_suggestions"], list)
 
 
 def test_pipeline_handles_duplicate_zone_ids(capsys):
@@ -119,10 +206,10 @@ def test_pipeline_handles_zone_with_zero_exposure_data():
     gis = [{"zone_id": "Z_empty"}]  # present but completely empty
     results = run_pipeline({"risk_data": risk, "gis_data": gis, "field_reports": []})
     assert results[0]["exposure_score"] == 0
-    assert results[0]["priority_score"] >= 0
+    assert isinstance(results[0]["operational_suggestions"], list)
 
 
-def test_confirmed_field_report_format_uppercase_high_triggers_urgent_action():
+def test_confirmed_field_report_format_uppercase_high_triggers_escalation_suggestion():
     """Matches the CONFIRMED real Field Reporting output format exactly."""
     risk = [{"zone_id": "ZONE_05", "risk_score": 70}]
     gis = [{"zone_id": "ZONE_05", "population_exposed": 500,
@@ -135,7 +222,7 @@ def test_confirmed_field_report_format_uppercase_high_triggers_urgent_action():
         "status": "VERIFIED", "created_at": "2026-09-05T10:30:00",
     }
     results = run_pipeline({"risk_data": risk, "gis_data": gis, "field_reports": [real_report]})
-    assert "URGENT (ground-confirmed):" in results[0]["recommended_action"]
+    assert "Escalate for immediate authority review" in results[0]["operational_suggestions"]
 
 
 def test_confirmed_field_report_critical_severity_is_scored_not_dropped():
@@ -153,7 +240,7 @@ def test_confirmed_field_report_newly_submitted_defaults_verified_false():
     report = {"zone_id": "ZONE_07", "severity": "HIGH", "verified": False}
     results = run_pipeline({"risk_data": risk, "gis_data": gis, "field_reports": [report]})
     assert results[0]["affected_summary"]["has_verified_field_report"] is False
-    assert "URGENT" not in results[0]["recommended_action"]
+    assert "Escalate for immediate authority review" not in results[0]["operational_suggestions"]
 
 
 def test_confirmed_field_report_null_zone_id_does_not_crash_or_match():
@@ -203,7 +290,7 @@ def test_case_1_zone_with_no_field_report():
     results = run_pipeline(data)
     assert len(results) == 1
     assert results[0]["affected_summary"]["has_verified_field_report"] is False
-    assert "URGENT" not in results[0]["recommended_action"]
+    assert "Escalate for immediate authority review" not in results[0]["operational_suggestions"]
 
 
 def test_case_2_zone_with_unverified_field_report():
@@ -218,7 +305,7 @@ def test_case_2_zone_with_unverified_field_report():
     data = {"risk_data": _base_risk(), "gis_data": _base_gis(), "field_reports": [report]}
     results = run_pipeline(data)
     assert results[0]["affected_summary"]["has_verified_field_report"] is False
-    assert "URGENT" not in results[0]["recommended_action"]  # must NOT get verified boost/tag
+    assert "Escalate for immediate authority review" not in results[0]["operational_suggestions"]  # must NOT escalate
 
 
 def test_case_3_zone_with_verified_high_field_report():
@@ -231,7 +318,7 @@ def test_case_3_zone_with_verified_high_field_report():
     data = {"risk_data": _base_risk(), "gis_data": _base_gis(), "field_reports": [report]}
     results = run_pipeline(data)
     assert results[0]["affected_summary"]["has_verified_field_report"] is True
-    assert "URGENT (ground-confirmed):" in results[0]["recommended_action"]
+    assert "Escalate for immediate authority review" in results[0]["operational_suggestions"]
 
 
 def test_case_4_zone_with_verified_critical_field_report():
@@ -244,9 +331,10 @@ def test_case_4_zone_with_verified_critical_field_report():
     data = {"risk_data": _base_risk(), "gis_data": _base_gis(), "field_reports": [report]}
     results = run_pipeline(data)
     assert results[0]["affected_summary"]["has_verified_field_report"] is True
-    assert "URGENT (ground-confirmed):" in results[0]["recommended_action"]
-    # priority score should reflect the +10 verified boost, must not exceed 100
-    assert results[0]["priority_score"] <= 100
+    assert "Escalate for immediate authority review" in results[0]["operational_suggestions"]
+    # output must still be fully JSON-serializable and internally consistent
+    import json
+    json.dumps(results)
 
 
 def test_case_5_field_report_with_null_zone_id():
@@ -263,7 +351,9 @@ def test_case_5_field_report_with_null_zone_id():
     assert results[0]["affected_summary"]["has_verified_field_report"] is False
 
 
-def test_case_6_multiple_zones_requiring_priority_ranking():
+def test_case_6_multiple_zones_each_get_own_suggestions():
+    """No more priority ranking across zones -- each zone is scored/suggested
+    independently. Output order is deterministic (by zone_id), not a ranking."""
     risk_data = [
         {"zone_id": "ZONE_01", "risk_score": 30},
         {"zone_id": "ZONE_02", "risk_score": 95},
@@ -277,13 +367,10 @@ def test_case_6_multiple_zones_requiring_priority_ranking():
     data = {"risk_data": risk_data, "gis_data": gis_data, "field_reports": []}
     results = run_pipeline(data)
     assert len(results) == 3
-    # ZONE_02 has highest risk + hospital + highest population -> must rank #1
-    assert results[0]["zone_id"] == "ZONE_02"
-    assert results[0]["priority_rank"] == 1
-    ranks = [r["priority_rank"] for r in results]
-    assert ranks == sorted(ranks)  # ranks strictly increasing 1,2,3
-    scores = [r["priority_score"] for r in results]
-    assert scores == sorted(scores, reverse=True)  # scores strictly descending
+    assert [r["zone_id"] for r in results] == ["ZONE_01", "ZONE_02", "ZONE_03"]  # sorted by zone_id
+    z2 = next(r for r in results if r["zone_id"] == "ZONE_02")
+    assert "Conduct immediate field verification" in z2["operational_suggestions"]  # highest risk
+    assert "Check accessibility to the nearby hospital" in z2["operational_suggestions"]
 
 
 def test_case_7_normal_complete_input_matches_output_contract():
@@ -301,10 +388,15 @@ def test_case_7_normal_complete_input_matches_output_contract():
     results = run_pipeline(data)
     required_keys = {
         "zone_id", "risk_score", "exposure_score", "vulnerability_score",
-        "criticality_score", "priority_score", "priority_band", "priority_rank",
-        "recommended_action", "explanation", "data_quality_flags", "affected_summary",
+        "criticality_score", "operational_suggestions",
+        "explanation", "data_quality_flags", "affected_summary",
     }
     assert required_keys.issubset(set(results[0].keys()))
+    # the removed fields must genuinely be gone, not just renamed
+    assert "priority_score" not in results[0]
+    assert "priority_band" not in results[0]
+    assert "priority_rank" not in results[0]
+    assert "recommended_action" not in results[0]
     # JSON-compatibility check: must serialize without error
     import json
     json.dumps(results)
@@ -355,9 +447,8 @@ def test_case_9_normal_zone_with_ai_and_gis_data_end_to_end():
     assert len(results) == 1
     r = results[0]
     assert r["zone_id"] == "ZONE_10"
-    assert 0 <= r["priority_score"] <= 100
-    assert r["priority_band"] in ("Critical", "High", "Medium", "Low")
-    assert r["priority_rank"] == 1
+    assert isinstance(r["operational_suggestions"], list) and len(r["operational_suggestions"]) >= 1
+    assert isinstance(r["explanation"], str) and len(r["explanation"]) > 0
 
 
 # ---------------------------------------------------------------------------
@@ -381,7 +472,9 @@ def test_sparse_gis_zone_all_zeros_produces_no_false_flags():
     }
     results = run_pipeline(data)
     assert results[0]["data_quality_flags"] == []
-    assert results[0]["priority_band"] == "Low"
+    assert results[0]["operational_suggestions"] == [
+        "Continue routine monitoring; no immediate operational action indicated"
+    ]
 
 
 def test_roads_bridges_as_plain_osm_way_ids_does_not_crash():
@@ -482,7 +575,7 @@ def test_multiple_reports_for_same_zone_uses_highest_severity():
         ],
     }
     results = run_pipeline(data)
-    assert "URGENT (ground-confirmed):" in results[0]["recommended_action"]
+    assert "Escalate for immediate authority review" in results[0]["operational_suggestions"]
 
 
 def test_final_output_is_fully_json_serializable_with_all_required_fields():
@@ -503,7 +596,7 @@ def test_final_output_is_fully_json_serializable_with_all_required_fields():
     reloaded = json.loads(serialized)
     required_keys = {
         "zone_id", "risk_score", "exposure_score", "vulnerability_score",
-        "criticality_score", "priority_score", "priority_band", "priority_rank",
-        "recommended_action", "explanation", "data_quality_flags", "affected_summary",
+        "criticality_score", "operational_suggestions",
+        "explanation", "data_quality_flags", "affected_summary",
     }
     assert required_keys.issubset(set(reloaded[0].keys()))

@@ -85,15 +85,19 @@ class FieldReport:
 # OUTPUT: What YOUR module sends to Backend -> Dashboard
 # ---------------------------------------------------------------------------
 @dataclass
-class PriorityOutput:
+class OperationalResponseOutput:
+    """Output contract for operational response intelligence.
+
+    The module no longer computes a separate priority score/rank. It converts
+    AI risk, GIS context, and verified field reports into explainable
+    operational suggestions.
+    """
     zone_id: str
     risk_score: float
-    exposure_score: float
-    vulnerability_score: float
-    criticality_score: float
-    priority_score: float
-    priority_band: str                 # "Critical" / "High" / "Medium" / "Low"
-    recommended_action: str
+    risk_category: str | None
+    operational_suggestions: list[str]
     explanation: str
-    data_quality_flags: list           # e.g. ["population_missing"] — see edge-case handling
-    affected_summary: dict             # small human-readable summary for the dashboard card
+    data_quality_flags: list[str]
+    affected_summary: dict
+
+

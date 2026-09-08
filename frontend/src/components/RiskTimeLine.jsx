@@ -1,11 +1,177 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-function RiskTimeline() {
+function RiskTimeline({ selectedZone }) {
   const [selectedPoint, setSelectedPoint] = useState(null);
 
-  // Demo historical monitoring data.
-  // Later this can come from the backend.
-  const timelineData = [
+  // --------------------------------------------------
+  // DEMO TIMELINE DATA BY ZONE
+  // Later this will come from:
+  // GET /api/timeline?zoneId=ZONE_10452
+  // --------------------------------------------------
+
+  const timelineDataByZone = {
+    ZONE_10452: [
+      {
+        time: "06:00",
+        risk: 58,
+        rainfall: 76,
+        soil: 68,
+        event: "Rainfall Increasing",
+      },
+      {
+        time: "08:00",
+        risk: 64,
+        rainfall: 102,
+        soil: 72,
+        event: "Risk Rising",
+      },
+      {
+        time: "10:00",
+        risk: 71,
+        rainfall: 128,
+        soil: 76,
+        event: "High Risk",
+      },
+      {
+        time: "12:00",
+        risk: 78,
+        rainfall: 154,
+        soil: 80,
+        event: "Heavy Rainfall",
+      },
+      {
+        time: "14:00",
+        risk: 84,
+        rainfall: 178,
+        soil: 82,
+        event: "Warning Triggered",
+      },
+      {
+        time: "16:00",
+        risk: 89,
+        rainfall: 198,
+        soil: 84,
+        event: "Critical Risk",
+      },
+      {
+        time: "18:00",
+        risk: 92,
+        rainfall: 210,
+        soil: 84,
+        event: "Current",
+      },
+    ],
+
+    ZONE_10453: [
+      {
+        time: "06:00",
+        risk: 45,
+        rainfall: 55,
+        soil: 60,
+        event: "Normal",
+      },
+      {
+        time: "08:00",
+        risk: 51,
+        rainfall: 72,
+        soil: 63,
+        event: "Rainfall Increasing",
+      },
+      {
+        time: "10:00",
+        risk: 59,
+        rainfall: 96,
+        soil: 66,
+        event: "Risk Rising",
+      },
+      {
+        time: "12:00",
+        risk: 66,
+        rainfall: 120,
+        soil: 69,
+        event: "Moderate Risk",
+      },
+      {
+        time: "14:00",
+        risk: 71,
+        rainfall: 140,
+        soil: 71,
+        event: "High Risk",
+      },
+      {
+        time: "16:00",
+        risk: 75,
+        rainfall: 154,
+        soil: 72,
+        event: "Warning Triggered",
+      },
+      {
+        time: "18:00",
+        risk: 78,
+        rainfall: 165,
+        soil: 72,
+        event: "Current",
+      },
+    ],
+
+    ZONE_10454: [
+      {
+        time: "06:00",
+        risk: 22,
+        rainfall: 35,
+        soil: 38,
+        event: "Normal",
+      },
+      {
+        time: "08:00",
+        risk: 23,
+        rainfall: 40,
+        soil: 39,
+        event: "Stable Conditions",
+      },
+      {
+        time: "10:00",
+        risk: 24,
+        rainfall: 46,
+        soil: 40,
+        event: "Normal",
+      },
+      {
+        time: "12:00",
+        risk: 25,
+        rainfall: 52,
+        soil: 41,
+        event: "Slight Increase",
+      },
+      {
+        time: "14:00",
+        risk: 26,
+        rainfall: 55,
+        soil: 41,
+        event: "Stable",
+      },
+      {
+        time: "16:00",
+        risk: 27,
+        rainfall: 59,
+        soil: 42,
+        event: "Monitoring",
+      },
+      {
+        time: "18:00",
+        risk: 28,
+        rainfall: 62,
+        soil: 42,
+        event: "Current",
+      },
+    ],
+  };
+
+  // --------------------------------------------------
+  // DEFAULT DATA
+  // --------------------------------------------------
+
+  const defaultTimelineData = [
     {
       time: "06:00",
       risk: 48,
@@ -57,10 +223,34 @@ function RiskTimeline() {
     },
   ];
 
-  const currentData = timelineData[timelineData.length - 1];
-  const previousData = timelineData[timelineData.length - 2];
+  // --------------------------------------------------
+  // SELECT TIMELINE DATA USING ZONE ID
+  // --------------------------------------------------
 
-  const riskIncrease = currentData.risk - previousData.risk;
+  const timelineData =
+    timelineDataByZone[selectedZone?.id] ||
+    defaultTimelineData;
+
+  // --------------------------------------------------
+  // RESET SELECTED POINT WHEN ZONE CHANGES
+  // --------------------------------------------------
+
+  useEffect(() => {
+    setSelectedPoint(null);
+  }, [selectedZone?.id]);
+
+  const currentData =
+    timelineData[timelineData.length - 1];
+
+  const previousData =
+    timelineData[timelineData.length - 2];
+
+  const riskIncrease =
+    currentData.risk - previousData.risk;
+
+  // --------------------------------------------------
+  // RISK HELPERS
+  // --------------------------------------------------
 
   const getRiskColor = (score) => {
     if (score >= 70) return "#D3968C";
@@ -74,11 +264,10 @@ function RiskTimeline() {
     return "LOW";
   };
 
-  /*
-   * Convert the data into SVG coordinates.
-   * This gives us a lightweight chart without
-   * installing another chart library.
-   */
+  // --------------------------------------------------
+  // CHART CALCULATIONS
+  // --------------------------------------------------
+
   const chartWidth = 760;
   const chartHeight = 260;
 
@@ -94,7 +283,9 @@ function RiskTimeline() {
     chartHeight - topPadding - bottomPadding;
 
   const getX = (index) => {
-    if (timelineData.length === 1) return leftPadding;
+    if (timelineData.length === 1) {
+      return leftPadding;
+    }
 
     return (
       leftPadding +
@@ -171,6 +362,58 @@ function RiskTimeline() {
           Track how environmental conditions and landslide
           risk have changed over time.
         </p>
+
+        {/* SELECTED ZONE */}
+
+        {selectedZone && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "9px",
+              flexWrap: "wrap",
+              marginTop: "13px",
+            }}
+          >
+            <span
+              style={{
+                color: "#839958",
+                fontSize: "11px",
+                fontWeight: "900",
+                letterSpacing: "1px",
+              }}
+            >
+              ANALYZING ZONE:
+            </span>
+
+            <span
+              style={{
+                color: "#F7F4D5",
+                fontSize: "13px",
+                fontWeight: "800",
+              }}
+            >
+              {selectedZone.name}
+            </span>
+
+            <span
+              style={{
+                color: "#839958",
+                background:
+                  "rgba(131,153,88,0.12)",
+                border:
+                  "1px solid rgba(131,153,88,0.3)",
+                padding: "4px 9px",
+                borderRadius: "7px",
+                fontSize: "10px",
+                fontWeight: "900",
+                letterSpacing: "0.5px",
+              }}
+            >
+              ZONE ID: {selectedZone.id}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* =====================================
@@ -219,7 +462,9 @@ function RiskTimeline() {
           >
             <strong
               style={{
-                color: "#D3968C",
+                color: getRiskColor(
+                  currentData.risk
+                ),
                 fontSize: "31px",
               }}
             >
@@ -228,7 +473,9 @@ function RiskTimeline() {
 
             <span
               style={{
-                color: "#D3968C",
+                color: getRiskColor(
+                  currentData.risk
+                ),
                 fontSize: "11px",
                 fontWeight: "900",
               }}
@@ -243,8 +490,12 @@ function RiskTimeline() {
               marginTop: "8px",
               padding: "5px 8px",
               borderRadius: "6px",
-              background: "rgba(211,150,140,0.12)",
-              color: "#D3968C",
+              background: `${getRiskColor(
+                currentData.risk
+              )}20`,
+              color: getRiskColor(
+                currentData.risk
+              ),
               fontSize: "9px",
               fontWeight: "900",
             }}
@@ -279,11 +530,15 @@ function RiskTimeline() {
 
           <strong
             style={{
-              color: "#D3968C",
+              color:
+                riskIncrease > 0
+                  ? "#D3968C"
+                  : "#839958",
               fontSize: "28px",
             }}
           >
-            +{riskIncrease}
+            {riskIncrease >= 0 ? "+" : ""}
+            {riskIncrease}
           </strong>
 
           <p
@@ -293,7 +548,7 @@ function RiskTimeline() {
               margin: "7px 0 0",
             }}
           >
-            Risk score increase since last reading
+            Risk score change since last reading
           </p>
         </div>
 
@@ -392,7 +647,7 @@ function RiskTimeline() {
               marginLeft: "3px",
               fontWeight: "800",
             }}
-            >
+          >
             %
           </span>
 
@@ -407,6 +662,70 @@ function RiskTimeline() {
           </p>
         </div>
       </div>
+
+      {/* =====================================
+          SELECTED ZONE INFO
+      ===================================== */}
+
+      {selectedZone && (
+        <div
+          style={{
+            marginBottom: "15px",
+            padding: "12px 16px",
+            borderRadius: "12px",
+            background:
+              "rgba(131,153,88,0.08)",
+            border:
+              "1px solid rgba(131,153,88,0.25)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "15px",
+            flexWrap: "wrap",
+          }}
+        >
+          <div>
+            <span
+              style={{
+                color: "#839958",
+                fontSize: "9px",
+                fontWeight: "900",
+                letterSpacing: "1.5px",
+              }}
+            >
+              TIMELINE FOR ZONE
+            </span>
+
+            <div
+              style={{
+                color: "#F7F4D5",
+                fontSize: "15px",
+                fontWeight: "800",
+                marginTop: "3px",
+              }}
+            >
+              {selectedZone.name}
+            </div>
+          </div>
+
+          <div
+            style={{
+              color: "#839958",
+              background:
+                "rgba(131,153,88,0.12)",
+              border:
+                "1px solid rgba(131,153,88,0.3)",
+              padding: "7px 12px",
+              borderRadius: "7px",
+              fontSize: "11px",
+              fontWeight: "900",
+              letterSpacing: "0.7px",
+            }}
+          >
+            ZONE ID: {selectedZone.id}
+          </div>
+        </div>
+      )}
 
       {/* =====================================
           CHART
@@ -500,9 +819,7 @@ function RiskTimeline() {
               display: "block",
             }}
           >
-            {/* =================================
-                GRID LINES
-            ================================= */}
+            {/* GRID LINES */}
 
             {[0, 20, 40, 60, 80, 100].map(
               (value) => {
@@ -532,31 +849,28 @@ function RiskTimeline() {
               }
             )}
 
-            {/* =================================
-                HIGH-RISK AREA
-            ================================= */}
+            {/* HIGH-RISK AREA */}
 
             <rect
               x={leftPadding}
               y={getY(100)}
               width={usableWidth}
-              height={getY(70) - getY(100)}
+              height={
+                getY(70) -
+                getY(100)
+              }
               fill="rgba(211,150,140,0.05)"
               rx="4"
             />
 
-            {/* =================================
-                AREA UNDER LINE
-            ================================= */}
+            {/* AREA UNDER LINE */}
 
             <polygon
               points={areaPoints}
               fill="rgba(131,153,88,0.08)"
             />
 
-            {/* =================================
-                RISK LINE
-            ================================= */}
+            {/* RISK LINE */}
 
             <polyline
               points={points}
@@ -567,63 +881,86 @@ function RiskTimeline() {
               strokeLinejoin="round"
             />
 
-            {/* =================================
-                DATA POINTS
-            ================================= */}
+            {/* DATA POINTS */}
 
-            {timelineData.map((item, index) => {
-              const x = getX(index);
-              const y = getY(item.risk);
-              const isSelected =
-                selectedPoint?.time === item.time;
+            {timelineData.map(
+              (item, index) => {
+                const x = getX(index);
+                const y = getY(item.risk);
 
-              return (
-                <g key={item.time}>
-                  {/* Outer glow */}
-                  <circle
-                    cx={x}
-                    cy={y}
-                    r={isSelected ? 9 : 6}
-                    fill="rgba(211,150,140,0.12)"
-                  />
+                const isSelected =
+                  selectedPoint?.time ===
+                  item.time;
 
-                  {/* Point */}
-                  <circle
-                    cx={x}
-                    cy={y}
-                    r={isSelected ? 5 : 4}
-                    fill={getRiskColor(item.risk)}
-                    stroke="#0A3323"
-                    strokeWidth="2"
-                    style={{
-                      cursor: "pointer",
-                    }}
-                    onClick={() =>
-                      setSelectedPoint(item)
-                    }
-                  />
+                return (
+                  <g key={item.time}>
+                    <circle
+                      cx={x}
+                      cy={y}
+                      r={
+                        isSelected
+                          ? 9
+                          : 6
+                      }
+                      fill="rgba(211,150,140,0.12)"
+                    />
 
-                  {/* Time */}
-                  <text
-                    x={x}
-                    y={chartHeight - 14}
-                    textAnchor="middle"
-                    fill="#89977C"
-                    fontSize="10"
-                  >
-                    {item.time}
-                  </text>
-                </g>
-              );
-            })}
+                    <circle
+                      cx={x}
+                      cy={y}
+                      r={
+                        isSelected
+                          ? 5
+                          : 4
+                      }
+                      fill={getRiskColor(
+                        item.risk
+                      )}
+                      stroke="#0A3323"
+                      strokeWidth="2"
+                      style={{
+                        cursor:
+                          "pointer",
+                      }}
+                      onClick={() =>
+                        setSelectedPoint(
+                          item
+                        )
+                      }
+                    />
+
+                    <text
+                      x={x}
+                      y={
+                        chartHeight -
+                        14
+                      }
+                      textAnchor="middle"
+                      fill="#89977C"
+                      fontSize="10"
+                    >
+                      {item.time}
+                    </text>
+                  </g>
+                );
+              }
+            )}
 
             {/* CURRENT LABEL */}
 
             <text
-              x={getX(timelineData.length - 1)}
-              y={getY(currentData.risk) - 16}
+              x={getX(
+                timelineData.length - 1
+              )}
+              y={
+                getY(
+                  currentData.risk
+                ) - 16
+              }
               textAnchor="middle"
-              fill="#D3968C"
+              fill={getRiskColor(
+                currentData.risk
+              )}
               fontSize="10"
               fontWeight="bold"
             >
@@ -645,7 +982,8 @@ function RiskTimeline() {
               border:
                 "1px solid rgba(131,153,88,0.2)",
               display: "flex",
-              justifyContent: "space-between",
+              justifyContent:
+                "space-between",
               alignItems: "center",
               gap: "15px",
               flexWrap: "wrap",
@@ -696,7 +1034,8 @@ function RiskTimeline() {
                   fontSize: "11px",
                 }}
               >
-                Rain {selectedPoint.rainfall} mm
+                Rain{" "}
+                {selectedPoint.rainfall} mm
               </span>
 
               <span
@@ -705,7 +1044,8 @@ function RiskTimeline() {
                   fontSize: "11px",
                 }}
               >
-                Soil {selectedPoint.soil}%
+                Soil{" "}
+                {selectedPoint.soil}%
               </span>
             </div>
           </div>
@@ -754,7 +1094,9 @@ function RiskTimeline() {
               margin: "0 0 12px",
             }}
           >
-            ⚠️ Risk is increasing
+            {riskIncrease > 0
+              ? "⚠️ Risk is increasing"
+              : "✓ Risk is stable"}
           </h3>
 
           <p
@@ -765,16 +1107,29 @@ function RiskTimeline() {
               margin: 0,
             }}
           >
-            The risk score has increased from{" "}
-            <strong style={{ color: "#F7F4D5" }}>
+            The risk score has changed from{" "}
+            <strong
+              style={{
+                color: "#F7F4D5",
+              }}
+            >
               {timelineData[0].risk}
             </strong>{" "}
             to{" "}
-            <strong style={{ color: "#D3968C" }}>
+            <strong
+              style={{
+                color:
+                  getRiskColor(
+                    currentData.risk
+                  ),
+              }}
+            >
               {currentData.risk}
             </strong>
-            . Rising rainfall and increasing soil moisture
-            are contributing to the upward risk trend.
+            . Environmental conditions
+            including rainfall and soil
+            moisture are contributing to the
+            current risk trend.
           </p>
 
           <div
@@ -806,8 +1161,11 @@ function RiskTimeline() {
                 margin: "5px 0 0",
               }}
             >
-              Maintain enhanced monitoring and be prepared
-              to activate emergency response procedures.
+              {currentData.risk >= 70
+                ? "Maintain enhanced monitoring and be prepared to activate emergency response procedures."
+                : currentData.risk >= 40
+                ? "Continue close monitoring of environmental conditions and prepare for possible escalation."
+                : "Continue routine monitoring and collect additional environmental observations."}
             </p>
           </div>
         </div>
@@ -849,24 +1207,63 @@ function RiskTimeline() {
           {[
             {
               label: "Rainfall",
-              value: currentData.rainfall,
+              value:
+                currentData.rainfall,
               unit: "mm",
-              status: "RISING",
-              color: "#D3968C",
+              status:
+                currentData.rainfall >=
+                150
+                  ? "HIGH"
+                  : currentData.rainfall >=
+                    80
+                  ? "RISING"
+                  : "NORMAL",
+              color:
+                currentData.rainfall >=
+                150
+                  ? "#D3968C"
+                  : currentData.rainfall >=
+                    80
+                  ? "#D9A441"
+                  : "#839958",
             },
+
             {
               label: "Soil Moisture",
-              value: currentData.soil,
+              value:
+                currentData.soil,
               unit: "%",
-              status: "HIGH",
-              color: "#D9A441",
+              status:
+                currentData.soil >=
+                75
+                  ? "HIGH"
+                  : currentData.soil >=
+                    50
+                  ? "RISING"
+                  : "NORMAL",
+              color:
+                currentData.soil >=
+                75
+                  ? "#D3968C"
+                  : currentData.soil >=
+                    50
+                  ? "#D9A441"
+                  : "#839958",
             },
+
             {
               label: "Risk Score",
-              value: currentData.risk,
+              value:
+                currentData.risk,
               unit: "/100",
-              status: "HIGH",
-              color: "#D3968C",
+              status:
+                getRiskLabel(
+                  currentData.risk
+                ),
+              color:
+                getRiskColor(
+                  currentData.risk
+                ),
             },
           ].map((item) => (
             <div
@@ -878,7 +1275,8 @@ function RiskTimeline() {
               <div
                 style={{
                   display: "flex",
-                  justifyContent: "space-between",
+                  justifyContent:
+                    "space-between",
                   alignItems: "center",
                   marginBottom: "6px",
                 }}
@@ -906,7 +1304,8 @@ function RiskTimeline() {
               <div
                 style={{
                   display: "flex",
-                  alignItems: "baseline",
+                  alignItems:
+                    "baseline",
                   gap: "5px",
                 }}
               >
@@ -932,22 +1331,6 @@ function RiskTimeline() {
           ))}
         </div>
       </div>
-
-      {/* =====================================
-          NOTICE
-      ===================================== */}
-
-      <p
-        style={{
-          color: "#7F8C72",
-          fontSize: "11px",
-          marginTop: "14px",
-          textAlign: "right",
-        }}
-      >
-        * Timeline values currently use demonstration data
-        and will later connect to historical backend data.
-      </p>
     </section>
   );
 }

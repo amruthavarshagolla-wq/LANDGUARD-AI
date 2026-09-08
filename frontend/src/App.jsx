@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import Navbar from "./components/Navbar";
 import Dashboard from "./components/Dashboard";
 import RiskMap from "./components/RiskMap";
@@ -10,54 +12,51 @@ import RiskTimeline from "./components/RiskTimeLine";
 import OfflineMode from "./components/OfflineMode";
 
 function App() {
+  // Stores the zone currently selected by the user
+  const [selectedZone, setSelectedZone] = useState(null);
+
   return (
     <div className="app">
       <Navbar />
 
       <main>
-        {/* Dashboard */}
         <section id="dashboard">
-          <Dashboard />
+          <Dashboard selectedZone={selectedZone} />
         </section>
 
-        {/* Risk Map */}
         <section id="risk-map">
-          <RiskMap />
+          <RiskMap
+            selectedZone={selectedZone}
+            onZoneSelect={setSelectedZone}
+          />
         </section>
 
-        {/* Risk Prediction */}
         <section id="risk-prediction">
-          <RiskPrediction />
+          <RiskPrediction selectedZone={selectedZone} />
         </section>
 
-        {/* Early Warning */}
         <section id="early-warning">
-          <EarlyWarning />
+          <EarlyWarning selectedZone={selectedZone} />
         </section>
 
-        {/* Alerts */}
         <section id="alerts">
-          <Alerts />
+          <Alerts selectedZone={selectedZone} />
         </section>
 
-        {/* Field Reports */}
         <section id="field-report">
-          <FieldReport />
+          <FieldReport selectedZone={selectedZone} />
         </section>
 
-        {/* Impact Analysis */}
         <section id="impact-analysis">
-          <ImpactAnalysis />
+          <ImpactAnalysis selectedZone={selectedZone} />
         </section>
 
-        {/* Risk Timeline */}
         <section id="risk-timeline">
-          <RiskTimeline />
+          <RiskTimeline selectedZone={selectedZone} />
         </section>
 
-        {/* Offline Mode */}
         <section id="offline-mode">
-          <OfflineMode />
+          <OfflineMode selectedZone={selectedZone} />
         </section>
       </main>
     </div>

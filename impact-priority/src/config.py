@@ -100,3 +100,43 @@ PRIORITY_BANDS = [
 
 # Default fallback values used when data is missing (see edge-case handling)
 DEFAULT_RISK_SCORE_IF_MISSING = 50   # treat unknown risk as "moderate" rather than 0 (avoid false safety)
+# NOTE: DEFAULT_RISK_SCORE_IF_MISSING and PRIORITY_WEIGHTS/PRIORITY_BANDS/
+# FIELD_REPORT_PRIORITY_BOOST above are no longer used by the pipeline
+# (see M6_OPERATIONAL_SUGGESTION_THRESHOLDS below). They are kept, unused,
+# in priority.py for reference/backward compatibility rather than deleted.
+
+
+# ---------------------------------------------------------------------------
+# M6 OPERATIONAL SUGGESTION thresholds (rule-based, NOT a priority score)
+# ---------------------------------------------------------------------------
+# These decide which operational-response suggestions fire for a zone. They
+# are OPERATIONAL / DEMO ASSUMPTIONS ONLY -- not scientifically validated
+# universal cutoffs. Say this explicitly to judges/reviewers, same as the
+# weights above.
+#
+# Where a suitable cutoff already existed elsewhere in this project, it is
+# reused here rather than a new number being invented:
+#   - RISK_HIGH_THRESHOLD / RISK_MEDIUM_THRESHOLD reuse the exact same 60/35
+#     split already used for PRIORITY_BANDS' "High"/"Medium" boundaries,
+#     just applied directly to the AI's risk_score instead of a computed
+#     priority_score.
+#   - HISTORICAL_LANDSLIDE_SIGNIFICANT_COUNT reuses HISTORICAL_EVENTS_REFERENCE
+#     from the vulnerability stage above.
+#
+# SIGNIFICANT_POPULATION_EXPOSED has no existing equivalent (POPULATION_REFERENCE
+# above is a different concept -- the population level at which the *exposure
+# score* saturates at 100, not an operational "should we flag this" trigger),
+# so it is a new, clearly-labeled, configurable assumption.
+
+RISK_HIGH_THRESHOLD = 60      # risk_score >= this (or risk_category text
+                               # "high" / "very high") -> high-risk suggestions
+RISK_MEDIUM_THRESHOLD = 35    # risk_score >= this -> medium-risk monitoring
+                               # suggestion (below RISK_HIGH_THRESHOLD)
+
+SIGNIFICANT_POPULATION_EXPOSED = 500   # population_exposed >= this -> suggest
+                                        # evacuation-readiness assessment
+
+HISTORICAL_LANDSLIDE_SIGNIFICANT_COUNT = HISTORICAL_EVENTS_REFERENCE  # reused as-is
+
+FIELD_REPORT_ESCALATION_SEVERITIES = ("high", "critical")  # reuses the same
+    # severity tier that already triggered the old "URGENT" action tag

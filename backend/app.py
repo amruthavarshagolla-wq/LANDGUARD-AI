@@ -48,7 +48,7 @@ MODEL_PATH = os.path.abspath(
         "..",
         "ai-ml",
         "model",
-        "landslide_model.joblib"
+        "landslide_model_augmented.joblib"
     )
 )
 
@@ -403,50 +403,57 @@ def ai_risk_category(score):
         return "VERY_HIGH"
 
 
+AI_MODEL_FEATURES = [
+    "elevation_m",
+    "slope_deg",
+    "aspect_deg",
+    "rainfall_mm",
+    "soil_clay_percent",
+    "soil_sand_percent",
+    "land_cover",
+    "distance_to_road_m",
+    "built_up_percent",
+    "forest_loss_percent",
+    "distance_to_stream_m",
+    "drainage_density",
+    "earthquake_distance_km"
+]
+
+
 @app.route("/api/prediction", methods=["GET"])
 def prediction_info():
-
     return jsonify({
         "success": True,
         "data": {
             "status": "CONNECTED" if ai_model is not None else "NOT_CONNECTED",
             "model": "Random Forest",
-            "model_file": "landslide_model.joblib",
+            "model_file": "landslide_model_augmented.joblib",
             "message": (
                 "AI landslide risk model is connected and ready."
                 if ai_model is not None
                 else "AI model could not be loaded."
             ),
             "input_fields": [
-                "latitude",
-                "longitude",
-                "rainfall_mm",
-                "slope_deg",
+                "zone_id",
                 "elevation_m",
+                "slope_deg",
+                "aspect_deg",
+                "rainfall_mm",
                 "soil_clay_percent",
                 "soil_sand_percent",
                 "land_cover",
-                "aspect_deg",
-                "distance_to_road_m"
-            ],
-            "model_features": [
-                "elevation_m",
-                "slope_deg",
-                "rainfall_mm",
-                "soil_clay_percent",
-                "soil_sand_percent",
                 "distance_to_road_m",
-                "aspect_sin",
-                "aspect_cos",
-                "land_cover"
+                "built_up_percent",
+                "forest_loss_percent",
+                "distance_to_stream_m",
+                "drainage_density",
+                "earthquake_distance_km"
             ],
+            "model_features": AI_MODEL_FEATURES,
             "output_fields": [
-                "prediction",
-                "landslide_probability",
+                "zone_id",
                 "risk_score",
-                "risk_category",
-                "latitude",
-                "longitude"
+                "risk_category"
             ]
         }
     })
@@ -454,7 +461,6 @@ def prediction_info():
 
 @app.route("/api/predict", methods=["POST"])
 def predict():
-
     try:
         data = request.get_json()
 
@@ -465,16 +471,20 @@ def predict():
             }), 400
 
         required_fields = [
-            "latitude",
-            "longitude",
-            "rainfall_mm",
-            "slope_deg",
+            "zone_id",
             "elevation_m",
+            "slope_deg",
+            "aspect_deg",
+            "rainfall_mm",
             "soil_clay_percent",
             "soil_sand_percent",
             "land_cover",
-            "aspect_deg",
-            "distance_to_road_m"
+            "distance_to_road_m",
+            "built_up_percent",
+            "forest_loss_percent",
+            "distance_to_stream_m",
+            "drainage_density",
+            "earthquake_distance_km"
         ]
 
         missing_fields = [
@@ -496,30 +506,23 @@ def predict():
                 "model_error": ai_model_error
             }), 503
 
-        latitude = float(data["latitude"])
-        longitude = float(data["longitude"])
-        rainfall_mm = float(data["rainfall_mm"])
-        slope_deg = float(data["slope_deg"])
-        elevation_m = float(data["elevation_m"])
-        soil_clay_percent = float(data["soil_clay_percent"])
-        soil_sand_percent = float(data["soil_sand_percent"])
-        land_cover = int(data["land_cover"])
-        aspect_deg = float(data["aspect_deg"])
-        distance_to_road_m = float(data["distance_to_road_m"])
-
-        aspect_rad = np.deg2rad(aspect_deg)
+        zone_id = str(data["zone_id"])
 
         row = pd.DataFrame([{
-            "elevation_m": elevation_m,
-            "slope_deg": slope_deg,
-            "rainfall_mm": rainfall_mm,
-            "soil_clay_percent": soil_clay_percent,
-            "soil_sand_percent": soil_sand_percent,
-            "distance_to_road_m": distance_to_road_m,
-            "aspect_sin": np.sin(aspect_rad),
-            "aspect_cos": np.cos(aspect_rad),
-            "land_cover": land_cover
-        }])
+            "elevation_m": float(data["elevation_m"]),
+            "slope_deg": float(data["slope_deg"]),
+            "aspect_deg": float(data["aspect_deg"]),
+            "rainfall_mm": float(data["rainfall_mm"]),
+            "soil_clay_percent": float(data["soil_clay_percent"]),
+            "soil_sand_percent": float(data["soil_sand_percent"]),
+            "land_cover": int(data["land_cover"]),
+            "distance_to_road_m": float(data["distance_to_road_m"]),
+            "built_up_percent": float(data["built_up_percent"]),
+            "forest_loss_percent": float(data["forest_loss_percent"]),
+            "distance_to_stream_m": float(data["distance_to_stream_m"]),
+            "drainage_density": float(data["drainage_density"]),
+            "earthquake_distance_km": float(data["earthquake_distance_km"])
+        }], columns=AI_MODEL_FEATURES)
 
         prediction = int(ai_model.predict(row)[0])
         probability = float(ai_model.predict_proba(row)[0][1])
@@ -530,13 +533,13 @@ def predict():
             "success": True,
             "data": {
                 "status": "CONNECTED",
-                "zone_id": data.get("zone_id"),
+                "zone_id": zone_id,
                 "prediction": prediction,
                 "landslide_probability": round(probability, 4),
                 "risk_score": round(risk_score, 2),
                 "risk_category": risk_category,
-                "latitude": latitude,
-                "longitude": longitude
+                "latitude": data.get("latitude"),
+                "longitude": data.get("longitude")
             }
         })
 
@@ -551,8 +554,6 @@ def predict():
             "success": False,
             "error": str(e)
         }), 500
-
-
 
 # =========================================================
 # FIELD REPORTS

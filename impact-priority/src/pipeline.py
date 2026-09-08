@@ -2,21 +2,30 @@
 pipeline.py
 ===========
 This is the ORCHESTRATOR — it runs every stage in order for every zone,
-and produces the final ranked list. This is the single function your
+and produces the final operational-response output list. This is the single function your
 backend teammate (Amruthavarsha) will call.
 
-PIPELINE ORDER (matches your spec exactly):
-  AI Risk + GIS Exposure
-    -> Impact/Exposure Assessment      (exposure.py)
-    -> Vulnerability Assessment        (vulnerability.py)
-    -> Infrastructure Criticality      (criticality.py)
-    -> Priority Score                  (priority.py)
-    -> Priority Ranking                (sort by score, done here)
-    -> Recommended Response Action     (actions.py)
-    -> Explain Why                     (explain.py)
-    -> structured output               (schemas.PriorityOutput shape)
+PIPELINE ORDER (M6 simplified -- see config.py / README for why the
+separate priority-ranking stage was removed):
+  AI Risk + GIS Exposure + Field Reports
+    -> Impact/Exposure Assessment       (exposure.py, unchanged)
+    -> Vulnerability Assessment         (vulnerability.py, unchanged)
+    -> Infrastructure Criticality       (criticality.py, unchanged)
+    -> Operational Response Suggestions (actions.py: generate_operational_suggestions)
+    -> Explain Why                      (explain.py: generate_operational_explanation)
+    -> structured output
 
-EDGE CASES HANDLED HERE:
+  The old priority.py stage (Priority Score -> Priority Band -> Rank) and
+  the old priority-band-driven recommend_action are no longer called here.
+  Both files are kept, unused, for reference/backward compatibility -- see
+  their module docstrings. exposure_score/vulnerability_score/
+  criticality_score are still computed and still included in the output
+  (they are legitimate impact-assessment numbers in their own right, not
+  "priority ranking"); only priority_score/priority_band/priority_rank/
+  recommended_action have been removed, replaced by operational_suggestions
+  + explanation.
+
+EDGE CASES HANDLED HERE (unchanged):
   - zone appears in risk data but missing from GIS data (or vice versa)
   - duplicate zone_id entries
   - missing field reports (perfectly fine, treated as empty list)
@@ -26,9 +35,8 @@ EDGE CASES HANDLED HERE:
 from .exposure import compute_exposure_score
 from .vulnerability import compute_vulnerability_score
 from .criticality import compute_criticality_score
-from .priority import compute_priority_score, classify_band
-from .actions import recommend_action
-from .explain import generate_explanation
+from .actions import generate_operational_suggestions
+from .explain import generate_operational_explanation
 
 
 def _index_by_zone(records: list, key: str = "zone_id") -> dict:
@@ -75,8 +83,8 @@ def _run_pipeline_core(risk_records: list, gis_records: list, field_reports: lis
     gis_records: list of dicts matching schemas.GISInput
     field_reports: list of dicts matching schemas.FieldReport (optional)
 
-    Returns: list of dicts matching schemas.PriorityOutput, SORTED by
-    priority_score descending (highest priority first).
+    Returns: list of operational-response output dicts, sorted by zone_id
+    for deterministic output (not by priority).
     """
     field_reports = field_reports or []
 
@@ -120,23 +128,10 @@ def _run_pipeline_core(risk_records: list, gis_records: list, field_reports: lis
         criticality_score, criticality_breakdown = compute_criticality_score(gis_record)
         data_quality_flags += criticality_breakdown.get("flags", [])
 
-        # --- Stage: Priority Score ---
-        has_verified_report = any(r.get("verified") for r in zone_reports)
-        priority_score, priority_flags = compute_priority_score(
-            risk_record.get("risk_score"),
-            exposure_score,
-            vulnerability_score,
-            criticality_score,
-            has_verified_field_report=has_verified_report,
-        )
-        data_quality_flags += priority_flags
-
-        # --- Stage: Priority Band ---
-        priority_band = classify_band(priority_score)
-
-        # --- Stage: Recommended Action ---
+        # --- Verified field-report status (unchanged from before) ---
         # NOTE: severity values from the field-reporting module arrive as uppercase
         # strings (e.g. "HIGH", "CRITICAL") -- normalize with .lower() before comparing.
+        has_verified_report = any(r.get("verified") for r in zone_reports)
         best_field_severity = None
         if zone_reports:
             severities = [str(r.get("severity", "")).lower() for r in zone_reports if r.get("verified")]
@@ -145,18 +140,13 @@ def _run_pipeline_core(risk_records: list, gis_records: list, field_reports: lis
             elif "high" in severities:
                 best_field_severity = "high"
 
-        action = recommend_action(
-            priority_band, criticality_breakdown, has_verified_report, best_field_severity
+        # --- Stage: Operational Response Suggestions ---
+        operational_suggestions, suggestion_reasons = generate_operational_suggestions(
+            risk_record, gis_record, has_verified_report, best_field_severity
         )
 
         # --- Stage: Explain Why ---
-        explanation = generate_explanation(
-            zone_id,
-            risk_record.get("risk_score") if risk_record.get("risk_score") is not None else 50,
-            exposure_score, vulnerability_score, criticality_score,
-            priority_score, priority_band,
-            exposure_breakdown, vulnerability_breakdown, criticality_breakdown,
-        )
+        explanation = generate_operational_explanation(zone_id, suggestion_reasons)
 
         # --- Final structured output for backend/dashboard ---
         output = {
@@ -165,9 +155,7 @@ def _run_pipeline_core(risk_records: list, gis_records: list, field_reports: lis
             "exposure_score": exposure_score,
             "vulnerability_score": vulnerability_score,
             "criticality_score": criticality_score,
-            "priority_score": priority_score,
-            "priority_band": priority_band,
-            "recommended_action": action,
+            "operational_suggestions": operational_suggestions,
             "explanation": explanation,
             "data_quality_flags": sorted(set(data_quality_flags)),
             "affected_summary": {
@@ -180,9 +168,9 @@ def _run_pipeline_core(risk_records: list, gis_records: list, field_reports: lis
         }
         results.append(output)
 
-    # --- Priority Ranking stage: sort descending by priority_score ---
-    results.sort(key=lambda r: r["priority_score"], reverse=True)
-    for rank, r in enumerate(results, start=1):
-        r["priority_rank"] = rank
+    # No priority ranking anymore (see module docstring). Sorted by zone_id
+    # purely for deterministic, stable output ordering -- this is NOT a
+    # priority ordering and callers should not treat it as one.
+    results.sort(key=lambda r: str(r["zone_id"]))
 
     return results

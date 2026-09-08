@@ -792,20 +792,6 @@ function FieldReport() {
         </div>
       </div>
 
-      {/* DEMO NOTICE */}
-
-      <p
-        style={{
-          color: "#7F8C72",
-          fontSize: "11px",
-          marginTop: "14px",
-          textAlign: "right",
-        }}
-      >
-        * Report submission currently uses frontend demonstration
-        logic and will later connect to POST /api/reports.
-      </p>
-
       <style>
         {`
           @keyframes reportAppear {

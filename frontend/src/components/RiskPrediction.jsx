@@ -1,28 +1,212 @@
 import { useEffect, useState } from "react";
 
-function RiskPrediction() {
-  const riskScore = 82;
+// =====================================================
+// DEMO AI PREDICTION DATA
+// =====================================================
 
-  const [animatedScore, setAnimatedScore] = useState(0);
+const predictionData = {
+  ZONE_10452: {
+    riskScore: 92,
+    riskLevel: "CRITICAL",
+    confidence: 94,
+    status: "ACTIVE",
+    lastUpdate: "2 min ago",
 
-  useEffect(() => {
-    let current = 0;
+    riskFactors: [
+      {
+        name: "Rainfall",
+        value: "210 mm",
+        contribution: 35,
+        description: "Very heavy rainfall detected",
+        icon: "🌧️",
+      },
+      {
+        name: "Soil Moisture",
+        value: "84%",
+        contribution: 27,
+        description: "Critical ground saturation",
+        icon: "💧",
+      },
+      {
+        name: "Slope",
+        value: "42°",
+        contribution: 21,
+        description: "Highly unstable terrain",
+        icon: "⛰️",
+      },
+      {
+        name: "Historical Events",
+        value: "14",
+        contribution: 9,
+        description: "Frequent past landslide activity",
+        icon: "📜",
+      },
+      {
+        name: "Elevation",
+        value: "1,420 m",
+        contribution: 5,
+        description: "High elevation terrain",
+        icon: "🏔️",
+      },
+      {
+        name: "Deforestation",
+        value: "32%",
+        contribution: 2,
+        description: "Reduced vegetation cover detected",
+        icon: "🌳",
+      },
+      {
+        name: "Earthquake Distance",
+        value: "18 km",
+        contribution: 1,
+        description: "Nearby seismic activity zone",
+        icon: "📍",
+      },
+    ],
 
-    const interval = setInterval(() => {
-      current += 1;
+    explanation:
+      "The critical risk level is primarily driven by very heavy rainfall, critical soil saturation, and highly unstable terrain. Reduced vegetation cover and proximity to seismic activity further increase slope vulnerability.",
+  },
 
-      if (current >= riskScore) {
-        current = riskScore;
-        clearInterval(interval);
-      }
+  ZONE_10453: {
+    riskScore: 78,
+    riskLevel: "HIGH",
+    confidence: 91,
+    status: "ACTIVE",
+    lastUpdate: "4 min ago",
 
-      setAnimatedScore(current);
-    }, 18);
+    riskFactors: [
+      {
+        name: "Rainfall",
+        value: "165 mm",
+        contribution: 31,
+        description: "Heavy rainfall detected",
+        icon: "🌧️",
+      },
+      {
+        name: "Soil Moisture",
+        value: "72%",
+        contribution: 24,
+        description: "High ground saturation",
+        icon: "💧",
+      },
+      {
+        name: "Slope",
+        value: "36°",
+        contribution: 20,
+        description: "Steep terrain detected",
+        icon: "⛰️",
+      },
+      {
+        name: "Historical Events",
+        value: "9",
+        contribution: 13,
+        description: "Past landslide activity",
+        icon: "📜",
+      },
+      {
+        name: "Elevation",
+        value: "1,180 m",
+        contribution: 8,
+        description: "Elevated terrain",
+        icon: "🏔️",
+      },
+      {
+        name: "Deforestation",
+        value: "18%",
+        contribution: 3,
+        description: "Moderate vegetation loss detected",
+        icon: "🌳",
+      },
+      {
+        name: "Earthquake Distance",
+        value: "42 km",
+        contribution: 1,
+        description: "Moderate distance from seismic zone",
+        icon: "📍",
+      },
+    ],
 
-    return () => clearInterval(interval);
-  }, []);
+    explanation:
+      "The high risk level is mainly influenced by heavy rainfall, elevated soil moisture, and steep terrain. Moderate vegetation loss and proximity to seismic activity are additional contributing factors requiring enhanced monitoring.",
+  },
 
-  const riskFactors = [
+  ZONE_10454: {
+    riskScore: 28,
+    riskLevel: "LOW",
+    confidence: 88,
+    status: "MONITORING",
+    lastUpdate: "6 min ago",
+
+    riskFactors: [
+      {
+        name: "Rainfall",
+        value: "62 mm",
+        contribution: 14,
+        description: "Low rainfall activity",
+        icon: "🌧️",
+      },
+      {
+        name: "Soil Moisture",
+        value: "42%",
+        contribution: 10,
+        description: "Normal ground moisture",
+        icon: "💧",
+      },
+      {
+        name: "Slope",
+        value: "18°",
+        contribution: 7,
+        description: "Moderate terrain slope",
+        icon: "⛰️",
+      },
+      {
+        name: "Historical Events",
+        value: "3",
+        contribution: 5,
+        description: "Limited past activity",
+        icon: "📜",
+      },
+      {
+        name: "Elevation",
+        value: "860 m",
+        contribution: 4,
+        description: "Moderate elevation",
+        icon: "🏔️",
+      },
+      {
+        name: "Deforestation",
+        value: "8%",
+        contribution: 1,
+        description: "Low vegetation loss detected",
+        icon: "🌳",
+      },
+      {
+        name: "Earthquake Distance",
+        value: "95 km",
+        contribution: 1,
+        description: "Far from major seismic zone",
+        icon: "📍",
+      },
+    ],
+
+    explanation:
+      "The current risk remains relatively low because rainfall and soil moisture are within a safer range, while the terrain has lower slope instability. Vegetation cover remains relatively stable and the zone is farther from major seismic activity.",
+  },
+};
+
+// =====================================================
+// DEFAULT DEMO DATA
+// =====================================================
+
+const defaultPrediction = {
+  riskScore: 82,
+  riskLevel: "HIGH",
+  confidence: 91,
+  status: "ACTIVE",
+  lastUpdate: "2 min ago",
+
+  riskFactors: [
     {
       name: "Rainfall",
       value: "185 mm",
@@ -59,13 +243,63 @@ function RiskPrediction() {
       icon: "🏔️",
     },
     {
-      name: "Temperature",
-      value: "24°C",
-      contribution: 4,
-      description: "Current temperature",
-      icon: "🌡️",
+      name: "Deforestation",
+      value: "21%",
+      contribution: 3,
+      description: "Vegetation loss detected",
+      icon: "🌳",
     },
-  ];
+    {
+      name: "Earthquake Distance",
+      value: "35 km",
+      contribution: 1,
+      description: "Distance from seismic zone",
+      icon: "📍",
+    },
+  ],
+
+  explanation:
+    "The current risk level is primarily driven by heavy rainfall, elevated soil moisture, and steep terrain. These conditions increase slope instability, while vegetation loss and seismic proximity provide additional environmental risk indicators.",
+};
+
+// =====================================================
+// RISK PREDICTION
+// =====================================================
+
+function RiskPrediction({ selectedZone }) {
+  // ===================================================
+  // SELECT PREDICTION DATA
+  // ===================================================
+
+  const prediction =
+    predictionData[selectedZone?.id] || defaultPrediction;
+
+  const riskScore = prediction.riskScore;
+
+  const [animatedScore, setAnimatedScore] = useState(0);
+
+  // ===================================================
+  // ANIMATE SCORE
+  // ===================================================
+
+  useEffect(() => {
+    let current = 0;
+
+    setAnimatedScore(0);
+
+    const interval = setInterval(() => {
+      current += 1;
+
+      if (current >= riskScore) {
+        current = riskScore;
+        clearInterval(interval);
+      }
+
+      setAnimatedScore(current);
+    }, 18);
+
+    return () => clearInterval(interval);
+  }, [riskScore]);
 
   return (
     <section
@@ -73,9 +307,13 @@ function RiskPrediction() {
         maxWidth: "1400px",
         margin: "0 auto",
         padding: "20px 40px 50px",
+        scrollMarginTop: "95px",
       }}
     >
-      {/* Header */}
+      {/* =================================================
+          HEADER
+      ================================================= */}
+
       <div style={{ marginBottom: "22px" }}>
         <p
           style={{
@@ -110,9 +348,52 @@ function RiskPrediction() {
           Explainable AI analysis of environmental and geographical risk
           factors.
         </p>
+
+        {/* =================================================
+            SELECTED ZONE
+        ================================================= */}
+
+        {selectedZone && (
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "10px",
+              marginTop: "14px",
+              padding: "8px 14px",
+              borderRadius: "10px",
+              background: "rgba(131,153,88,0.12)",
+              border: "1px solid rgba(131,153,88,0.3)",
+            }}
+          >
+            <span
+              style={{
+                color: "#F7F4D5",
+                fontSize: "12px",
+                fontWeight: "800",
+              }}
+            >
+              ANALYZING: {selectedZone.name}
+            </span>
+
+            <span
+              style={{
+                color: "#839958",
+                fontSize: "11px",
+                fontWeight: "800",
+                letterSpacing: "0.5px",
+              }}
+            >
+              {selectedZone.id}
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Main AI Panel */}
+      {/* =================================================
+          MAIN AI PANEL
+      ================================================= */}
+
       <div
         style={{
           display: "grid",
@@ -120,7 +401,10 @@ function RiskPrediction() {
           gap: "20px",
         }}
       >
-        {/* Risk Score Card */}
+        {/* =================================================
+            RISK SCORE CARD
+        ================================================= */}
+
         <div
           style={{
             borderRadius: "22px",
@@ -143,12 +427,14 @@ function RiskPrediction() {
               fontWeight: "800",
               letterSpacing: "1.5px",
               marginBottom: "20px",
+              textAlign: "center",
             }}
           >
             CURRENT AI RISK SCORE
           </div>
 
           {/* Circular Score */}
+
           <div
             style={{
               width: "205px",
@@ -201,19 +487,26 @@ function RiskPrediction() {
             </div>
           </div>
 
+          {/* Risk Level */}
+
           <div
             style={{
               marginTop: "22px",
               padding: "9px 20px",
               borderRadius: "30px",
-              background: "#D3968C",
-              color: "#0A3323",
+              background:
+                prediction.riskLevel === "CRITICAL"
+                  ? "#B83A3A"
+                  : prediction.riskLevel === "HIGH"
+                  ? "#E07A32"
+                  : "#5C8D45",
+              color: "#FFFFFF",
               fontSize: "13px",
               fontWeight: "900",
               letterSpacing: "0.5px",
             }}
           >
-            HIGH RISK
+            {prediction.riskLevel} RISK
           </div>
 
           <div
@@ -228,7 +521,10 @@ function RiskPrediction() {
           </div>
         </div>
 
-        {/* Risk Factors */}
+        {/* =================================================
+            RISK FACTORS
+        ================================================= */}
+
         <div
           style={{
             borderRadius: "22px",
@@ -286,7 +582,10 @@ function RiskPrediction() {
             </div>
           </div>
 
-          {/* Factors */}
+          {/* =================================================
+              FACTORS
+          ================================================= */}
+
           <div
             style={{
               display: "grid",
@@ -295,14 +594,15 @@ function RiskPrediction() {
               gap: "13px",
             }}
           >
-            {riskFactors.map((factor) => (
+            {prediction.riskFactors.map((factor) => (
               <div
                 key={factor.name}
                 style={{
                   padding: "15px",
                   borderRadius: "15px",
                   background: "rgba(247,244,213,0.06)",
-                  border: "1px solid rgba(247,244,213,0.1)",
+                  border:
+                    "1px solid rgba(247,244,213,0.1)",
                 }}
               >
                 <div
@@ -356,6 +656,7 @@ function RiskPrediction() {
                       color: "#F7F4D5",
                       fontSize: "16px",
                       fontWeight: "900",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     {factor.value}
@@ -363,6 +664,7 @@ function RiskPrediction() {
                 </div>
 
                 {/* Contribution */}
+
                 <div
                   style={{
                     display: "flex",
@@ -413,7 +715,10 @@ function RiskPrediction() {
             ))}
           </div>
 
-          {/* AI Explanation */}
+          {/* =================================================
+              AI EXPLANATION
+          ================================================= */}
+
           <div
             style={{
               marginTop: "18px",
@@ -445,16 +750,16 @@ function RiskPrediction() {
                 margin: 0,
               }}
             >
-              The current risk level is primarily driven by heavy rainfall,
-              elevated soil moisture, and steep terrain. These conditions
-              increase slope instability and indicate a significantly higher
-              probability of landslide activity.
+              {prediction.explanation}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Confidence / Status Row */}
+      {/* =================================================
+          CONFIDENCE / STATUS ROW
+      ================================================= */}
+
       <div
         style={{
           marginTop: "18px",
@@ -464,12 +769,15 @@ function RiskPrediction() {
           gap: "15px",
         }}
       >
+        {/* Model Confidence */}
+
         <div
           style={{
             padding: "18px",
             borderRadius: "17px",
             background: "#0A3323",
-            border: "1px solid rgba(131,153,88,0.3)",
+            border:
+              "1px solid rgba(131,153,88,0.3)",
           }}
         >
           <div
@@ -490,7 +798,7 @@ function RiskPrediction() {
               marginTop: "5px",
             }}
           >
-            91%
+            {prediction.confidence}%
           </div>
 
           <div
@@ -498,12 +806,13 @@ function RiskPrediction() {
               marginTop: "8px",
               height: "5px",
               borderRadius: "10px",
-              background: "rgba(247,244,213,0.1)",
+              background:
+                "rgba(247,244,213,0.1)",
             }}
           >
             <div
               style={{
-                width: "91%",
+                width: `${prediction.confidence}%`,
                 height: "100%",
                 borderRadius: "10px",
                 background: "#839958",
@@ -512,12 +821,15 @@ function RiskPrediction() {
           </div>
         </div>
 
+        {/* Prediction Status */}
+
         <div
           style={{
             padding: "18px",
             borderRadius: "17px",
             background: "#0A3323",
-            border: "1px solid rgba(131,153,88,0.3)",
+            border:
+              "1px solid rgba(131,153,88,0.3)",
           }}
         >
           <div
@@ -538,7 +850,7 @@ function RiskPrediction() {
               marginTop: "8px",
             }}
           >
-            ● ACTIVE
+            ● {prediction.status}
           </div>
 
           <div
@@ -552,12 +864,15 @@ function RiskPrediction() {
           </div>
         </div>
 
+        {/* Last Model Update */}
+
         <div
           style={{
             padding: "18px",
             borderRadius: "17px",
             background: "#0A3323",
-            border: "1px solid rgba(131,153,88,0.3)",
+            border:
+              "1px solid rgba(131,153,88,0.3)",
           }}
         >
           <div
@@ -578,7 +893,7 @@ function RiskPrediction() {
               marginTop: "8px",
             }}
           >
-            2 min ago
+            {prediction.lastUpdate}
           </div>
 
           <div
