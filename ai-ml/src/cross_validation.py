@@ -1,36 +1,92 @@
 import pandas as pd
 
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.pipeline import Pipeline
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 
 
-# Load dataset
-df = pd.read_csv("data/landslide_training_data.csv")
+# Load augmented zone dataset
+df = pd.read_csv("data/zone_training_data_augmented.csv")
 
 
-# Environmental features only
+# Final 14 ML features
 features = [
     "elevation_m",
     "slope_deg",
     "rainfall_mm",
     "soil_clay_percent",
     "soil_sand_percent",
-    "land_cover"
+    "land_cover",
+    "distance_to_road_m",
+    "aspect_sin",
+    "aspect_cos",
+    "built_up_percent",
+    "forest_loss_percent",
+    "distance_to_stream_m",
+    "drainage_density",
+    "earthquake_distance_km"
 ]
-
 
 X = df[features]
 y = df["landslide_label"]
 
 
-# Create Random Forest
-model = RandomForestClassifier(
-    n_estimators=200,
-    random_state=42
+# Categorical and numerical features
+categorical_features = ["land_cover"]
+
+numerical_features = [
+    "elevation_m",
+    "slope_deg",
+    "rainfall_mm",
+    "soil_clay_percent",
+    "soil_sand_percent",
+    "distance_to_road_m",
+    "aspect_sin",
+    "aspect_cos",
+    "built_up_percent",
+    "forest_loss_percent",
+    "distance_to_stream_m",
+    "drainage_density",
+    "earthquake_distance_km"
+]
+
+
+# Preprocessing
+preprocessor = ColumnTransformer(
+    transformers=[
+        (
+            "categorical",
+            OneHotEncoder(handle_unknown="ignore"),
+            categorical_features
+        ),
+        (
+            "numerical",
+            "passthrough",
+            numerical_features
+        )
+    ]
 )
 
 
-# Create 5-fold cross-validation
+# Random Forest
+model = Pipeline(
+    steps=[
+        ("preprocessor", preprocessor),
+        (
+            "classifier",
+            RandomForestClassifier(
+                n_estimators=300,
+                random_state=42,
+                class_weight="balanced"
+            )
+        )
+    ]
+)
+
+
+# 5-fold cross-validation
 cv = StratifiedKFold(
     n_splits=5,
     shuffle=True,
@@ -38,7 +94,7 @@ cv = StratifiedKFold(
 )
 
 
-# Calculate accuracy for each fold
+# Calculate accuracy
 scores = cross_val_score(
     model,
     X,
