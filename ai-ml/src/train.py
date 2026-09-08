@@ -1,54 +1,140 @@
-import os
-import numpy as np
 import pandas as pd
+import numpy as np
+import joblib
 
+from pathlib import Path
+
+from sklearn.model_selection import train_test_split
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.metrics import (
     accuracy_score,
     precision_score,
     recall_score,
     f1_score,
-    roc_auc_score
-)
-
-import joblib
-
-
-INPUT_FILE = "data/processed/zone_training_data.csv"
-MODEL_FILE = "models/landslide_model.joblib"
-
-
-print("===== LOADING ZONE DATA =====")
-
-df = pd.read_csv(INPUT_FILE)
-
-print(f"Zones: {len(df)}")
-print(f"Positive zones: {(df['landslide_label'] == 1).sum()}")
-print(f"Negative zones: {(df['landslide_label'] == 0).sum()}")
-
-
-# --------------------------------------------------
-# Aspect transformation
-# --------------------------------------------------
-
-df["aspect_sin"] = np.sin(
-    np.deg2rad(df["aspect_deg"])
-)
-
-df["aspect_cos"] = np.cos(
-    np.deg2rad(df["aspect_deg"])
+    roc_auc_score,
+    classification_report
 )
 
 
-# --------------------------------------------------
-# Features
-# --------------------------------------------------
+# ============================================================
+# PATHS
+# ============================================================
 
-numeric_features = [
+BASE_DIR = Path(__file__).resolve().parents[1]
+
+DATA_FILE = BASE_DIR / "data" / "processed" / "zone_training_data_augmented.csv"
+
+# Works for both:
+# LANDGUARD_M1/models/
+# and
+# LANDGUARD_M1/ai-ml/model/
+if (BASE_DIR / "model").exists():
+    MODEL_DIR = BASE_DIR / "model"
+else:
+    MODEL_DIR = BASE_DIR / "models"
+
+MODEL_DIR.mkdir(parents=True, exist_ok=True)
+
+MODEL_FILE = MODEL_DIR / "landslide_model.joblib"
+
+
+# ============================================================
+# 14 FEATURES
+# ============================================================
+
+FEATURES = [
+    "elevation_m",
+    "slope_deg",
+    "rainfall_mm",
+    "soil_clay_percent",
+    "soil_sand_percent",
+    "land_cover",
+    "distance_to_road_m",
+    "aspect_sin",
+    "aspect_cos",
+    "built_up_percent",
+    "forest_loss_percent",
+    "distance_to_stream_m",
+    "drainage_density",
+    "earthquake_distance_km"
+]
+
+TARGET = "landslide_label"
+
+
+# ============================================================
+# LOAD DATA
+# ============================================================
+
+print()
+print("==============================================")
+print("   LANDGUARD 14-FEATURE MODEL TRAINING")
+print("==============================================")
+print()
+
+print(f"Loading dataset:")
+print(DATA_FILE)
+
+df = pd.read_csv(DATA_FILE)
+
+print()
+print(f"Rows: {len(df)}")
+print(f"Columns: {len(df.columns)}")
+
+
+# ============================================================
+# CHECK FEATURES
+# ============================================================
+
+missing_features = [f for f in FEATURES if f not in df.columns]
+
+if missing_features:
+    print()
+    print("ERROR: Missing features:")
+    for feature in missing_features:
+        print(f"  - {feature}")
+    raise ValueError("Required features are missing from dataset.")
+
+if TARGET not in df.columns:
+    raise ValueError(f"Target column '{TARGET}' not found.")
+
+
+# ============================================================
+# CLEAN DATA
+# ============================================================
+
+df = df[FEATURES + [TARGET]].copy()
+
+df = df.dropna()
+
+print()
+print(f"Rows after removing missing values: {len(df)}")
+
+print()
+print("Target distribution:")
+print(df[TARGET].value_counts())
+
+
+# ============================================================
+# SPLIT FEATURES / TARGET
+# ============================================================
+
+X = df[FEATURES]
+y = df[TARGET]
+
+
+# ============================================================
+# FEATURE TYPES
+# ============================================================
+
+CATEGORICAL_FEATURES = [
+    "land_cover"
+]
+
+NUMERICAL_FEATURES = [
     "elevation_m",
     "slope_deg",
     "rainfall_mm",
@@ -56,222 +142,156 @@ numeric_features = [
     "soil_sand_percent",
     "distance_to_road_m",
     "aspect_sin",
-    "aspect_cos"
+    "aspect_cos",
+    "built_up_percent",
+    "forest_loss_percent",
+    "distance_to_stream_m",
+    "drainage_density",
+    "earthquake_distance_km"
 ]
 
-categorical_features = [
-    "land_cover"
-]
 
-features = numeric_features + categorical_features
-
-X = df[features]
-y = df["landslide_label"]
-
-
-# --------------------------------------------------
-# Spatial groups
-# --------------------------------------------------
-
-# Extract grid coordinates from zone ID:
-# EKH_00001_00003
-
-parts = df["zone_id"].str.split("_", expand=True)
-
-grid_x = parts[1].astype(int)
-grid_y = parts[2].astype(int)
-
-# Group nearby zones into larger spatial blocks
-spatial_groups = (
-    (grid_x // 5).astype(str)
-    + "_"
-    + (grid_y // 5).astype(str)
-)
-
-
-# --------------------------------------------------
-# Preprocessing
-# --------------------------------------------------
+# ============================================================
+# PREPROCESSING
+# ============================================================
 
 preprocessor = ColumnTransformer(
     transformers=[
         (
             "categorical",
             OneHotEncoder(
-                handle_unknown="ignore"
+                handle_unknown="ignore",
+                sparse_output=False
             ),
-            categorical_features
+            CATEGORICAL_FEATURES
         ),
         (
-            "numeric",
+            "numerical",
             "passthrough",
-            numeric_features
+            NUMERICAL_FEATURES
         )
     ]
 )
 
 
-# --------------------------------------------------
-# Final Random Forest model
-# --------------------------------------------------
+# ============================================================
+# MODEL
+# ============================================================
 
-model = Pipeline([
-    (
-        "preprocessor",
-        preprocessor
-    ),
-    (
-        "classifier",
-        RandomForestClassifier(
-            n_estimators=300,
-            max_depth=12,
-            min_samples_leaf=2,
-            class_weight="balanced",
-            random_state=42
-        )
-    )
-])
+model = RandomForestClassifier(
+    n_estimators=300,
+    random_state=42,
+    class_weight="balanced",
+    min_samples_leaf=2,
+    n_jobs=-1
+)
 
 
-# --------------------------------------------------
-# Spatial cross-validation
-# --------------------------------------------------
+# ============================================================
+# PIPELINE
+# ============================================================
+
+pipeline = Pipeline(
+    steps=[
+        ("preprocessor", preprocessor),
+        ("classifier", model)
+    ]
+)
+
+
+# ============================================================
+# TRAIN / TEST SPLIT
+# ============================================================
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.20,
+    random_state=42,
+    stratify=y
+)
 
 print()
-print("===== SPATIAL CROSS-VALIDATION =====")
-
-cv = StratifiedGroupKFold(
-    n_splits=5,
-    shuffle=True,
-    random_state=42
-)
-
-accuracy_scores = []
-precision_scores = []
-recall_scores = []
-f1_scores = []
-roc_auc_scores = []
+print("Training samples:", len(X_train))
+print("Testing samples :", len(X_test))
 
 
-for fold, (train_idx, test_idx) in enumerate(
-    cv.split(X, y, groups=spatial_groups),
-    start=1
-):
-
-    X_train = X.iloc[train_idx]
-    X_test = X.iloc[test_idx]
-
-    y_train = y.iloc[train_idx]
-    y_test = y.iloc[test_idx]
-
-    model.fit(X_train, y_train)
-
-    predictions = model.predict(X_test)
-
-    probabilities = model.predict_proba(X_test)[:, 1]
-
-    accuracy_scores.append(
-        accuracy_score(y_test, predictions)
-    )
-
-    precision_scores.append(
-        precision_score(
-            y_test,
-            predictions,
-            zero_division=0
-        )
-    )
-
-    recall_scores.append(
-        recall_score(
-            y_test,
-            predictions,
-            zero_division=0
-        )
-    )
-
-    f1_scores.append(
-        f1_score(
-            y_test,
-            predictions,
-            zero_division=0
-        )
-    )
-
-    roc_auc_scores.append(
-        roc_auc_score(
-            y_test,
-            probabilities
-        )
-    )
-
-    print(
-        f"Fold {fold}: "
-        f"Accuracy={accuracy_scores[-1]:.3f}, "
-        f"F1={f1_scores[-1]:.3f}, "
-        f"ROC-AUC={roc_auc_scores[-1]:.3f}"
-    )
-
-
-# --------------------------------------------------
-# CV summary
-# --------------------------------------------------
+# ============================================================
+# TRAIN
+# ============================================================
 
 print()
-print("===== SPATIAL CV SUMMARY =====")
-
-print(
-    f"Accuracy : "
-    f"{np.mean(accuracy_scores):.3f} "
-    f"+/- {np.std(accuracy_scores):.3f}"
-)
-
-print(
-    f"Precision: "
-    f"{np.mean(precision_scores):.3f} "
-    f"+/- {np.std(precision_scores):.3f}"
-)
-
-print(
-    f"Recall   : "
-    f"{np.mean(recall_scores):.3f} "
-    f"+/- {np.std(recall_scores):.3f}"
-)
-
-print(
-    f"F1       : "
-    f"{np.mean(f1_scores):.3f} "
-    f"+/- {np.std(f1_scores):.3f}"
-)
-
-print(
-    f"ROC-AUC  : "
-    f"{np.mean(roc_auc_scores):.3f} "
-    f"+/- {np.std(roc_auc_scores):.3f}"
-)
-
-
-# --------------------------------------------------
-# Train final model on ALL zones
-# --------------------------------------------------
-
+print("Training Random Forest...")
+print("Features:", len(FEATURES))
 print()
-print("===== TRAINING FINAL MODEL =====")
 
-model.fit(X, y)
+pipeline.fit(X_train, y_train)
 
 
-# Save model
-os.makedirs("models", exist_ok=True)
+# ============================================================
+# EVALUATION
+# ============================================================
 
-joblib.dump(
-    model,
-    MODEL_FILE
-)
+y_pred = pipeline.predict(X_test)
+y_prob = pipeline.predict_proba(X_test)[:, 1]
+
+accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred, zero_division=0)
+recall = recall_score(y_test, y_pred, zero_division=0)
+f1 = f1_score(y_test, y_pred, zero_division=0)
+roc_auc = roc_auc_score(y_test, y_prob)
 
 
 print()
-print("===== FINAL MODEL COMPLETE =====")
-print(f"Training zones: {len(df)}")
-print(f"Features: {len(features)}")
-print(f"Model saved: {MODEL_FILE}")
+print("==============================================")
+print("             MODEL RESULTS")
+print("==============================================")
+
+print(f"Accuracy  : {accuracy:.4f}")
+print(f"Precision : {precision:.4f}")
+print(f"Recall    : {recall:.4f}")
+print(f"F1 Score  : {f1:.4f}")
+print(f"ROC-AUC   : {roc_auc:.4f}")
+
+print()
+print("Classification Report:")
+print(classification_report(
+    y_test,
+    y_pred,
+    zero_division=0
+))
+
+
+# ============================================================
+# TRAIN FINAL MODEL ON ALL DATA
+# ============================================================
+
+print()
+print("Training final model using ALL available data...")
+
+pipeline.fit(X, y)
+
+
+# ============================================================
+# SAVE MODEL
+# ============================================================
+
+joblib.dump(pipeline, MODEL_FILE)
+
+print()
+print("==============================================")
+print("             TRAINING COMPLETE")
+print("==============================================")
+
+print()
+print(f"Features used: {len(FEATURES)}")
+
+for i, feature in enumerate(FEATURES, start=1):
+    print(f"{i:2}. {feature}")
+
+print()
+print(f"Model saved to:")
+print(MODEL_FILE)
+
+print()
+print("14-feature model is ready.")
