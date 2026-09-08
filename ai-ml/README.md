@@ -60,7 +60,7 @@ Example input:
 
 ```json
 {
-  "zone_id": "EKH_00000_00019",
+  "zone_id": "EKH_00019",
   "elevation_m": 1450,
   "slope_deg": 32.5,
   "aspect_deg": 180,
