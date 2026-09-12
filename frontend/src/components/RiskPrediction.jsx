@@ -1,305 +1,279 @@
 import { useEffect, useState } from "react";
 
-// =====================================================
-// DEMO AI PREDICTION DATA
-// =====================================================
+const API_BASE = "http://localhost:5000";
 
-const predictionData = {
-  ZONE_10452: {
-    riskScore: 92,
-    riskLevel: "CRITICAL",
-    confidence: 94,
-    status: "ACTIVE",
-    lastUpdate: "2 min ago",
-
-    riskFactors: [
-      {
-        name: "Rainfall",
-        value: "210 mm",
-        contribution: 35,
-        description: "Very heavy rainfall detected",
-        icon: "🌧️",
-      },
-      {
-        name: "Soil Moisture",
-        value: "84%",
-        contribution: 27,
-        description: "Critical ground saturation",
-        icon: "💧",
-      },
-      {
-        name: "Slope",
-        value: "42°",
-        contribution: 21,
-        description: "Highly unstable terrain",
-        icon: "⛰️",
-      },
-      {
-        name: "Historical Events",
-        value: "14",
-        contribution: 9,
-        description: "Frequent past landslide activity",
-        icon: "📜",
-      },
-      {
-        name: "Elevation",
-        value: "1,420 m",
-        contribution: 5,
-        description: "High elevation terrain",
-        icon: "🏔️",
-      },
-      {
-        name: "Deforestation",
-        value: "32%",
-        contribution: 2,
-        description: "Reduced vegetation cover detected",
-        icon: "🌳",
-      },
-      {
-        name: "Earthquake Distance",
-        value: "18 km",
-        contribution: 1,
-        description: "Nearby seismic activity zone",
-        icon: "📍",
-      },
-    ],
-
-    explanation:
-      "The critical risk level is primarily driven by very heavy rainfall, critical soil saturation, and highly unstable terrain. Reduced vegetation cover and proximity to seismic activity further increase slope vulnerability.",
-  },
-
-  ZONE_10453: {
-    riskScore: 78,
-    riskLevel: "HIGH",
-    confidence: 91,
-    status: "ACTIVE",
-    lastUpdate: "4 min ago",
-
-    riskFactors: [
-      {
-        name: "Rainfall",
-        value: "165 mm",
-        contribution: 31,
-        description: "Heavy rainfall detected",
-        icon: "🌧️",
-      },
-      {
-        name: "Soil Moisture",
-        value: "72%",
-        contribution: 24,
-        description: "High ground saturation",
-        icon: "💧",
-      },
-      {
-        name: "Slope",
-        value: "36°",
-        contribution: 20,
-        description: "Steep terrain detected",
-        icon: "⛰️",
-      },
-      {
-        name: "Historical Events",
-        value: "9",
-        contribution: 13,
-        description: "Past landslide activity",
-        icon: "📜",
-      },
-      {
-        name: "Elevation",
-        value: "1,180 m",
-        contribution: 8,
-        description: "Elevated terrain",
-        icon: "🏔️",
-      },
-      {
-        name: "Deforestation",
-        value: "18%",
-        contribution: 3,
-        description: "Moderate vegetation loss detected",
-        icon: "🌳",
-      },
-      {
-        name: "Earthquake Distance",
-        value: "42 km",
-        contribution: 1,
-        description: "Moderate distance from seismic zone",
-        icon: "📍",
-      },
-    ],
-
-    explanation:
-      "The high risk level is mainly influenced by heavy rainfall, elevated soil moisture, and steep terrain. Moderate vegetation loss and proximity to seismic activity are additional contributing factors requiring enhanced monitoring.",
-  },
-
-  ZONE_10454: {
-    riskScore: 28,
-    riskLevel: "LOW",
-    confidence: 88,
-    status: "MONITORING",
-    lastUpdate: "6 min ago",
-
-    riskFactors: [
-      {
-        name: "Rainfall",
-        value: "62 mm",
-        contribution: 14,
-        description: "Low rainfall activity",
-        icon: "🌧️",
-      },
-      {
-        name: "Soil Moisture",
-        value: "42%",
-        contribution: 10,
-        description: "Normal ground moisture",
-        icon: "💧",
-      },
-      {
-        name: "Slope",
-        value: "18°",
-        contribution: 7,
-        description: "Moderate terrain slope",
-        icon: "⛰️",
-      },
-      {
-        name: "Historical Events",
-        value: "3",
-        contribution: 5,
-        description: "Limited past activity",
-        icon: "📜",
-      },
-      {
-        name: "Elevation",
-        value: "860 m",
-        contribution: 4,
-        description: "Moderate elevation",
-        icon: "🏔️",
-      },
-      {
-        name: "Deforestation",
-        value: "8%",
-        contribution: 1,
-        description: "Low vegetation loss detected",
-        icon: "🌳",
-      },
-      {
-        name: "Earthquake Distance",
-        value: "95 km",
-        contribution: 1,
-        description: "Far from major seismic zone",
-        icon: "📍",
-      },
-    ],
-
-    explanation:
-      "The current risk remains relatively low because rainfall and soil moisture are within a safer range, while the terrain has lower slope instability. Vegetation cover remains relatively stable and the zone is farther from major seismic activity.",
-  },
+const getRiskLevel = (score) => {
+  if (score >= 75) return "VERY HIGH";
+  if (score >= 50) return "HIGH";
+  if (score >= 25) return "MODERATE";
+  return "LOW";
 };
 
-// =====================================================
-// DEFAULT DEMO DATA
-// =====================================================
-
-const defaultPrediction = {
-  riskScore: 82,
-  riskLevel: "HIGH",
-  confidence: 91,
-  status: "ACTIVE",
-  lastUpdate: "2 min ago",
-
-  riskFactors: [
-    {
-      name: "Rainfall",
-      value: "185 mm",
-      contribution: 32,
-      description: "Heavy rainfall detected",
-      icon: "🌧️",
-    },
-    {
-      name: "Soil Moisture",
-      value: "78%",
-      contribution: 25,
-      description: "High ground saturation",
-      icon: "💧",
-    },
-    {
-      name: "Slope",
-      value: "38°",
-      contribution: 20,
-      description: "Steep terrain detected",
-      icon: "⛰️",
-    },
-    {
-      name: "Historical Events",
-      value: "12",
-      contribution: 12,
-      description: "Past landslide activity",
-      icon: "📜",
-    },
-    {
-      name: "Elevation",
-      value: "1,240 m",
-      contribution: 7,
-      description: "High elevation terrain",
-      icon: "🏔️",
-    },
-    {
-      name: "Deforestation",
-      value: "21%",
-      contribution: 3,
-      description: "Vegetation loss detected",
-      icon: "🌳",
-    },
-    {
-      name: "Earthquake Distance",
-      value: "35 km",
-      contribution: 1,
-      description: "Distance from seismic zone",
-      icon: "📍",
-    },
-  ],
-
-  explanation:
-    "The current risk level is primarily driven by heavy rainfall, elevated soil moisture, and steep terrain. These conditions increase slope instability, while vegetation loss and seismic proximity provide additional environmental risk indicators.",
+const getRiskColor = (level) => {
+  if (level === "VERY HIGH") return "#B83A3A";
+  if (level === "HIGH") return "#E07A32";
+  if (level === "MODERATE") return "#D5A83A";
+  return "#5C8D45";
 };
 
-// =====================================================
-// RISK PREDICTION
-// =====================================================
+const toNumber = (value, fallback = 0) => {
+  const number = Number(value);
+
+  return Number.isFinite(number)
+    ? number
+    : fallback;
+};
 
 function RiskPrediction({ selectedZone }) {
-  // ===================================================
-  // SELECT PREDICTION DATA
-  // ===================================================
+  const [formData, setFormData] = useState({
+    elevation_m: 1200,
+    slope_deg: 35,
+    rainfall_mm: 180,
+    soil_clay_percent: 30,
+    soil_sand_percent: 45,
+    land_cover: "1",
+    distance_to_road_m: 500,
+    aspect_deg: 180,
+    built_up_percent: 10,
+    forest_loss_percent: 15,
+    distance_to_stream_m: 300,
+    drainage_density: 2,
+    earthquake_distance_km: 40,
+  });
 
-  const prediction =
-    predictionData[selectedZone?.id] || defaultPrediction;
-
-  const riskScore = prediction.riskScore;
-
-  const [animatedScore, setAnimatedScore] = useState(0);
-
-  // ===================================================
-  // ANIMATE SCORE
-  // ===================================================
+  const [prediction, setPrediction] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    let current = 0;
+    if (!selectedZone) return;
 
-    setAnimatedScore(0);
+    setFormData((previous) => ({
+      ...previous,
+      rainfall_mm:
+        toNumber(
+          selectedZone.rainfall,
+          previous.rainfall_mm
+        ),
+    }));
 
-    const interval = setInterval(() => {
-      current += 1;
+    setPrediction(null);
+    setError("");
+  }, [selectedZone]);
 
-      if (current >= riskScore) {
-        current = riskScore;
-        clearInterval(interval);
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+
+    setFormData((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  };
+
+  const runPrediction = async () => {
+    setLoading(true);
+    setError("");
+    setPrediction(null);
+
+    try {
+      const requestBody = {
+        zone_id:
+          selectedZone?.id ||
+          selectedZone?.name ||
+          "LANDGUARD_ZONE",
+
+        elevation_m:
+          toNumber(formData.elevation_m),
+
+        slope_deg:
+          toNumber(formData.slope_deg),
+
+        aspect_deg:
+          toNumber(formData.aspect_deg),
+
+        rainfall_mm:
+          toNumber(formData.rainfall_mm),
+
+        soil_clay_percent:
+          toNumber(formData.soil_clay_percent),
+
+        soil_sand_percent:
+          toNumber(formData.soil_sand_percent),
+
+        land_cover:
+          toNumber(formData.land_cover, 1),
+
+        distance_to_road_m:
+          toNumber(formData.distance_to_road_m),
+
+        built_up_percent:
+          toNumber(formData.built_up_percent),
+
+        forest_loss_percent:
+          toNumber(formData.forest_loss_percent),
+
+        distance_to_stream_m:
+          toNumber(formData.distance_to_stream_m),
+
+        drainage_density:
+          toNumber(formData.drainage_density),
+
+        earthquake_distance_km:
+          toNumber(formData.earthquake_distance_km),
+      };
+
+      console.log(
+        "LANDGUARD AI request:",
+        requestBody
+      );
+
+      const response = await fetch(
+        `${API_BASE}/api/predict`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        }
+      );
+
+      const data = await response.json();
+
+      console.log(
+        "LANDGUARD AI response:",
+        data
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ||
+            data.message ||
+            "Prediction request failed."
+        );
       }
 
-      setAnimatedScore(current);
-    }, 18);
+      /*
+       * IMPORTANT:
+       * LANDGUARD backend uses:
+       *
+       * {
+       *   success: true,
+       *   data: {
+       *     risk_score: ...,
+       *     risk_category: ...
+       *   }
+       * }
+       *
+       * Therefore we read data.data first.
+       */
+      const result =
+        data &&
+        data.data &&
+        typeof data.data === "object"
+          ? data.data
+          : data;
 
-    return () => clearInterval(interval);
-  }, [riskScore]);
+      let score = toNumber(
+        result.risk_score,
+        NaN
+      );
+
+      if (!Number.isFinite(score)) {
+        score = toNumber(
+          result.riskScore,
+          NaN
+        );
+      }
+
+      if (!Number.isFinite(score)) {
+        score = toNumber(
+          result.score,
+          NaN
+        );
+      }
+
+      if (!Number.isFinite(score)) {
+        const probability = toNumber(
+          result.landslide_probability,
+          NaN
+        );
+
+        if (Number.isFinite(probability)) {
+          score =
+            probability <= 1
+              ? probability * 100
+              : probability;
+        }
+      }
+
+      if (!Number.isFinite(score)) {
+        const probability = toNumber(
+          result.probability,
+          NaN
+        );
+
+        if (Number.isFinite(probability)) {
+          score =
+            probability <= 1
+              ? probability * 100
+              : probability;
+        }
+      }
+
+      if (!Number.isFinite(score)) {
+        throw new Error(
+          "AI backend returned no valid risk score."
+        );
+      }
+
+      score = Math.max(
+        0,
+        Math.min(100, score)
+      );
+
+      const category =
+        result.risk_category ||
+        result.risk_level ||
+        getRiskLevel(score);
+
+      const predictionValue =
+        Number(result.prediction);
+
+      setPrediction({
+        score:
+          Math.round(score * 100) / 100,
+
+        level:
+          String(category).toUpperCase(),
+
+        prediction:
+          predictionValue === 1
+            ? "LANDSLIDE RISK DETECTED"
+            : "LOW LANDSLIDE RISK",
+
+        status:
+          result.status ||
+          "CONNECTED",
+      });
+    } catch (err) {
+      console.error(
+        "LANDGUARD AI prediction error:",
+        err
+      );
+
+      setError(
+        err.message ||
+          "Unable to connect to the AI backend."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const riskColor = prediction
+    ? getRiskColor(prediction.level)
+    : "#839958";
 
   return (
     <section
@@ -310,11 +284,12 @@ function RiskPrediction({ selectedZone }) {
         scrollMarginTop: "95px",
       }}
     >
-      {/* =================================================
-          HEADER
-      ================================================= */}
-
-      <div style={{ marginBottom: "22px" }}>
+      {/* HEADER */}
+      <div
+        style={{
+          marginBottom: "25px",
+        }}
+      >
         <p
           style={{
             color: "#839958",
@@ -335,7 +310,7 @@ function RiskPrediction({ selectedZone }) {
             fontWeight: "800",
           }}
         >
-          🤖 AI Risk Intelligence
+          AI Risk Intelligence
         </h2>
 
         <p
@@ -345,570 +320,532 @@ function RiskPrediction({ selectedZone }) {
             fontSize: "15px",
           }}
         >
-          Explainable AI analysis of environmental and geographical risk
-          factors.
+          Run the LANDGUARD machine-learning
+          model using environmental and
+          geographical conditions.
         </p>
-
-        {/* =================================================
-            SELECTED ZONE
-        ================================================= */}
-
-        {selectedZone && (
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "10px",
-              marginTop: "14px",
-              padding: "8px 14px",
-              borderRadius: "10px",
-              background: "rgba(131,153,88,0.12)",
-              border: "1px solid rgba(131,153,88,0.3)",
-            }}
-          >
-            <span
-              style={{
-                color: "#F7F4D5",
-                fontSize: "12px",
-                fontWeight: "800",
-              }}
-            >
-              ANALYZING: {selectedZone.name}
-            </span>
-
-            <span
-              style={{
-                color: "#839958",
-                fontSize: "11px",
-                fontWeight: "800",
-                letterSpacing: "0.5px",
-              }}
-            >
-              {selectedZone.id}
-            </span>
-          </div>
-        )}
       </div>
 
-      {/* =================================================
-          MAIN AI PANEL
-      ================================================= */}
+      {/* SELECTED ZONE */}
+      {selectedZone && (
+        <div
+          style={{
+            padding: "14px 18px",
+            marginBottom: "20px",
+            borderRadius: "12px",
+            background:
+              "rgba(131,153,88,0.12)",
+            border:
+              "1px solid rgba(131,153,88,0.3)",
+          }}
+        >
+          <div
+            style={{
+              color: "#839958",
+              fontSize: "11px",
+              fontWeight: "800",
+              letterSpacing: "1px",
+            }}
+          >
+            SELECTED ZONE
+          </div>
 
+          <div
+            style={{
+              color: "#F7F4D5",
+              fontSize: "20px",
+              fontWeight: "800",
+              marginTop: "4px",
+            }}
+          >
+            {selectedZone.name ||
+              selectedZone.id ||
+              "Selected Zone"}
+          </div>
+        </div>
+      )}
+
+      {/* MAIN GRID */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "320px 1fr",
-          gap: "20px",
+          gridTemplateColumns:
+            "minmax(300px, 1fr) minmax(300px, 1fr)",
+          gap: "22px",
         }}
       >
-        {/* =================================================
-            RISK SCORE CARD
-        ================================================= */}
-
+        {/* INPUT CARD */}
         <div
           style={{
-            borderRadius: "22px",
-            padding: "28px",
             background:
-              "linear-gradient(145deg, #105666, #0A3323)",
-            border: "1px solid rgba(211,150,140,0.45)",
-            boxShadow: "0 18px 45px rgba(0,0,0,0.3)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            minHeight: "410px",
+              "rgba(10,51,35,0.75)",
+            border:
+              "1px solid rgba(131,153,88,0.25)",
+            borderRadius: "16px",
+            padding: "22px",
           }}
         >
-          <div
+          <h3
             style={{
-              color: "#B8C3A0",
-              fontSize: "11px",
-              fontWeight: "800",
-              letterSpacing: "1.5px",
-              marginBottom: "20px",
-              textAlign: "center",
+              color: "#F7F4D5",
+              marginTop: 0,
+              marginBottom: "18px",
+              fontSize: "19px",
             }}
           >
-            CURRENT AI RISK SCORE
-          </div>
-
-          {/* Circular Score */}
-
-          <div
-            style={{
-              width: "205px",
-              height: "205px",
-              borderRadius: "50%",
-              background: `conic-gradient(
-                #D3968C ${animatedScore * 3.6}deg,
-                rgba(247,244,213,0.12) 0deg
-              )`,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              position: "relative",
-              boxShadow:
-                "0 0 35px rgba(211,150,140,0.25)",
-            }}
-          >
-            <div
-              style={{
-                width: "165px",
-                height: "165px",
-                borderRadius: "50%",
-                background: "#0A3323",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <div
-                style={{
-                  color: "#F7F4D5",
-                  fontSize: "48px",
-                  lineHeight: 1,
-                  fontWeight: "900",
-                }}
-              >
-                {animatedScore}
-              </div>
-
-              <div
-                style={{
-                  color: "#B8C3A0",
-                  fontSize: "12px",
-                  marginTop: "5px",
-                }}
-              >
-                OUT OF 100
-              </div>
-            </div>
-          </div>
-
-          {/* Risk Level */}
-
-          <div
-            style={{
-              marginTop: "22px",
-              padding: "9px 20px",
-              borderRadius: "30px",
-              background:
-                prediction.riskLevel === "CRITICAL"
-                  ? "#B83A3A"
-                  : prediction.riskLevel === "HIGH"
-                  ? "#E07A32"
-                  : "#5C8D45",
-              color: "#FFFFFF",
-              fontSize: "13px",
-              fontWeight: "900",
-              letterSpacing: "0.5px",
-            }}
-          >
-            {prediction.riskLevel} RISK
-          </div>
-
-          <div
-            style={{
-              marginTop: "18px",
-              color: "#839958",
-              fontSize: "11px",
-              fontWeight: "700",
-            }}
-          >
-            ● AI ANALYSIS ACTIVE
-          </div>
-        </div>
-
-        {/* =================================================
-            RISK FACTORS
-        ================================================= */}
-
-        <div
-          style={{
-            borderRadius: "22px",
-            padding: "25px",
-            background:
-              "linear-gradient(145deg, #105666, #0A3323)",
-            border: "1px solid rgba(131,153,88,0.4)",
-            boxShadow: "0 18px 45px rgba(0,0,0,0.3)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: "10px",
-              flexWrap: "wrap",
-              marginBottom: "20px",
-            }}
-          >
-            <div>
-              <h3
-                style={{
-                  margin: 0,
-                  color: "#F7F4D5",
-                  fontSize: "20px",
-                }}
-              >
-                Risk Factor Analysis
-              </h3>
-
-              <p
-                style={{
-                  margin: "5px 0 0",
-                  color: "#B8C3A0",
-                  fontSize: "12px",
-                }}
-              >
-                Factors influencing the current AI prediction
-              </p>
-            </div>
-
-            <div
-              style={{
-                padding: "7px 11px",
-                borderRadius: "20px",
-                background: "rgba(131,153,88,0.15)",
-                border: "1px solid rgba(131,153,88,0.35)",
-                color: "#839958",
-                fontSize: "10px",
-                fontWeight: "800",
-              }}
-            >
-              EXPLAINABLE AI
-            </div>
-          </div>
-
-          {/* =================================================
-              FACTORS
-          ================================================= */}
+            Environmental Inputs
+          </h3>
 
           <div
             style={{
               display: "grid",
               gridTemplateColumns:
-                "repeat(auto-fit, minmax(240px, 1fr))",
-              gap: "13px",
+                "repeat(2, minmax(0, 1fr))",
+              gap: "14px",
             }}
           >
-            {prediction.riskFactors.map((factor) => (
-              <div
-                key={factor.name}
+            <InputField
+              label="Elevation (m)"
+              name="elevation_m"
+              value={formData.elevation_m}
+              onChange={handleChange}
+            />
+
+            <InputField
+              label="Slope (°)"
+              name="slope_deg"
+              value={formData.slope_deg}
+              onChange={handleChange}
+            />
+
+            <InputField
+              label="Rainfall (mm)"
+              name="rainfall_mm"
+              value={formData.rainfall_mm}
+              onChange={handleChange}
+            />
+
+            <InputField
+              label="Soil Clay (%)"
+              name="soil_clay_percent"
+              value={formData.soil_clay_percent}
+              onChange={handleChange}
+            />
+
+            <InputField
+              label="Soil Sand (%)"
+              name="soil_sand_percent"
+              value={formData.soil_sand_percent}
+              onChange={handleChange}
+            />
+
+            <InputField
+              label="Road Distance (m)"
+              name="distance_to_road_m"
+              value={formData.distance_to_road_m}
+              onChange={handleChange}
+            />
+
+            <InputField
+              label="Aspect (°)"
+              name="aspect_deg"
+              value={formData.aspect_deg}
+              onChange={handleChange}
+            />
+
+            <InputField
+              label="Built-up (%)"
+              name="built_up_percent"
+              value={formData.built_up_percent}
+              onChange={handleChange}
+            />
+
+            <InputField
+              label="Forest Loss (%)"
+              name="forest_loss_percent"
+              value={formData.forest_loss_percent}
+              onChange={handleChange}
+            />
+
+            <InputField
+              label="Stream Distance (m)"
+              name="distance_to_stream_m"
+              value={formData.distance_to_stream_m}
+              onChange={handleChange}
+            />
+
+            <InputField
+              label="Drainage Density"
+              name="drainage_density"
+              value={formData.drainage_density}
+              onChange={handleChange}
+            />
+
+            <InputField
+              label="Earthquake Distance (km)"
+              name="earthquake_distance_km"
+              value={formData.earthquake_distance_km}
+              onChange={handleChange}
+            />
+
+            {/* LAND COVER */}
+            <div
+              style={{
+                gridColumn: "1 / -1",
+              }}
+            >
+              <label
                 style={{
-                  padding: "15px",
-                  borderRadius: "15px",
-                  background: "rgba(247,244,213,0.06)",
-                  border:
-                    "1px solid rgba(247,244,213,0.1)",
+                  display: "block",
+                  color: "#B8C3A0",
+                  fontSize: "12px",
+                  fontWeight: "700",
+                  marginBottom: "6px",
+                }}
+              >
+                Land Cover
+              </label>
+
+              <select
+                name="land_cover"
+                value={formData.land_cover}
+                onChange={handleChange}
+                style={inputStyle}
+              >
+                <option value="1">
+                  Forest
+                </option>
+
+                <option value="2">
+                  Agriculture
+                </option>
+
+                <option value="3">
+                  Built-up
+                </option>
+
+                <option value="4">
+                  Grassland
+                </option>
+
+                <option value="5">
+                  Bare land
+                </option>
+              </select>
+            </div>
+          </div>
+
+          {/* RUN BUTTON */}
+          <button
+            type="button"
+            onClick={runPrediction}
+            disabled={loading}
+            style={{
+              width: "100%",
+              marginTop: "22px",
+              padding: "14px",
+              border: "none",
+              borderRadius: "10px",
+              background: loading
+                ? "#596344"
+                : "#839958",
+              color: "#FFFFFF",
+              cursor: loading
+                ? "not-allowed"
+                : "pointer",
+              fontSize: "14px",
+              fontWeight: "900",
+            }}
+          >
+            {loading
+              ? "RUNNING AI MODEL..."
+              : "RUN AI RISK PREDICTION"}
+          </button>
+
+          {/* ERROR */}
+          {error && (
+            <div
+              style={{
+                marginTop: "15px",
+                padding: "12px",
+                borderRadius: "9px",
+                background:
+                  "rgba(184,58,58,0.15)",
+                border:
+                  "1px solid rgba(184,58,58,0.4)",
+                color: "#F0B4B4",
+                fontSize: "12px",
+              }}
+            >
+              {error}
+            </div>
+          )}
+        </div>
+
+        {/* RESULT CARD */}
+        <div
+          style={{
+            background:
+              "rgba(10,51,35,0.75)",
+            border:
+              "1px solid rgba(131,153,88,0.25)",
+            borderRadius: "16px",
+            padding: "22px",
+          }}
+        >
+          <h3
+            style={{
+              color: "#F7F4D5",
+              marginTop: 0,
+              fontSize: "19px",
+            }}
+          >
+            AI Prediction Result
+          </h3>
+
+          {/* EMPTY STATE */}
+          {!prediction && !loading && (
+            <div
+              style={{
+                minHeight: "300px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                textAlign: "center",
+                color: "#B8C3A0",
+                fontSize: "14px",
+                padding: "20px",
+              }}
+            >
+              <div>
+                Enter environmental conditions
+                <br />
+                and click
+                <strong
+                  style={{
+                    color: "#F7F4D5",
+                    marginLeft: "4px",
+                  }}
+                >
+                  RUN AI RISK PREDICTION
+                </strong>
+              </div>
+            </div>
+          )}
+
+          {/* LOADING */}
+          {loading && (
+            <div
+              style={{
+                minHeight: "300px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#B8C3A0",
+                fontSize: "15px",
+              }}
+            >
+              Connecting to LANDGUARD AI...
+            </div>
+          )}
+
+          {/* RESULT */}
+          {prediction && !loading && (
+            <div>
+              {/* SCORE */}
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "20px 0",
                 }}
               >
                 <div
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: "10px",
+                    color: "#B8C3A0",
+                    fontSize: "12px",
+                    fontWeight: "800",
+                    letterSpacing: "1px",
                   }}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "9px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: "21px",
-                      }}
-                    >
-                      {factor.icon}
-                    </span>
-
-                    <div>
-                      <div
-                        style={{
-                          color: "#F7F4D5",
-                          fontSize: "13px",
-                          fontWeight: "800",
-                        }}
-                      >
-                        {factor.name}
-                      </div>
-
-                      <div
-                        style={{
-                          color: "#B8C3A0",
-                          fontSize: "10px",
-                          marginTop: "2px",
-                        }}
-                      >
-                        {factor.description}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      color: "#F7F4D5",
-                      fontSize: "16px",
-                      fontWeight: "900",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {factor.value}
-                  </div>
+                  PREDICTED RISK SCORE
                 </div>
-
-                {/* Contribution */}
 
                 <div
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    marginTop: "13px",
+                    fontSize: "64px",
+                    fontWeight: "900",
+                    color: riskColor,
+                    lineHeight: 1.1,
+                    marginTop: "8px",
                   }}
                 >
-                  <div
-                    style={{
-                      flex: 1,
-                      height: "7px",
-                      background:
-                        "rgba(247,244,213,0.12)",
-                      borderRadius: "10px",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: `${factor.contribution * 3.125}%`,
-                        height: "100%",
-                        borderRadius: "10px",
-                        background:
-                          factor.contribution >= 25
-                            ? "#D3968C"
-                            : factor.contribution >= 15
-                            ? "#C47F72"
-                            : "#839958",
-                        transition: "width 1s ease",
-                      }}
-                    />
-                  </div>
+                  {prediction.score}
+                </div>
 
-                  <span
-                    style={{
-                      color: "#839958",
-                      fontSize: "10px",
-                      fontWeight: "800",
-                      minWidth: "35px",
-                      textAlign: "right",
-                    }}
-                  >
-                    {factor.contribution}%
-                  </span>
+                <div
+                  style={{
+                    color: "#839958",
+                    fontSize: "13px",
+                  }}
+                >
+                  OUT OF 100
                 </div>
               </div>
-            ))}
-          </div>
 
-          {/* =================================================
-              AI EXPLANATION
-          ================================================= */}
+              {/* CATEGORY */}
+              <div
+                style={{
+                  padding: "18px",
+                  borderRadius: "12px",
+                  background:
+                    "rgba(255,255,255,0.04)",
+                  border:
+                    `1px solid ${riskColor}`,
+                  textAlign: "center",
+                }}
+              >
+                <div
+                  style={{
+                    color: "#B8C3A0",
+                    fontSize: "11px",
+                    fontWeight: "800",
+                  }}
+                >
+                  RISK CATEGORY
+                </div>
 
-          <div
-            style={{
-              marginTop: "18px",
-              padding: "16px",
-              borderRadius: "15px",
-              background:
-                "linear-gradient(135deg, rgba(211,150,140,0.12), rgba(16,86,102,0.25))",
-              border:
-                "1px solid rgba(211,150,140,0.25)",
-            }}
-          >
-            <div
-              style={{
-                color: "#D3968C",
-                fontSize: "11px",
-                fontWeight: "900",
-                letterSpacing: "1px",
-                marginBottom: "6px",
-              }}
-            >
-              🧠 AI EXPLANATION
+                <div
+                  style={{
+                    color: riskColor,
+                    fontSize: "25px",
+                    fontWeight: "900",
+                    marginTop: "5px",
+                  }}
+                >
+                  {prediction.level}
+                </div>
+              </div>
+
+              {/* MODEL DECISION */}
+              <div
+                style={{
+                  marginTop: "15px",
+                  padding: "15px",
+                  borderRadius: "10px",
+                  background:
+                    "rgba(131,153,88,0.1)",
+                }}
+              >
+                <div
+                  style={{
+                    color: "#839958",
+                    fontSize: "11px",
+                    fontWeight: "800",
+                  }}
+                >
+                  MODEL DECISION
+                </div>
+
+                <div
+                  style={{
+                    color: "#F7F4D5",
+                    fontSize: "16px",
+                    fontWeight: "800",
+                    marginTop: "5px",
+                  }}
+                >
+                  {prediction.prediction}
+                </div>
+              </div>
+
+              {/* CONNECTION */}
+              <div
+                style={{
+                  marginTop: "15px",
+                  color: "#8FC47A",
+                  fontSize: "12px",
+                  fontWeight: "700",
+                  textAlign: "center",
+                }}
+              >
+                ● AI MODEL CONNECTED
+              </div>
             </div>
-
-            <p
-              style={{
-                color: "#F7F4D5",
-                fontSize: "13px",
-                lineHeight: 1.6,
-                margin: 0,
-              }}
-            >
-              {prediction.explanation}
-            </p>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* =================================================
-          CONFIDENCE / STATUS ROW
-      ================================================= */}
-
+      {/* MODEL INFO */}
       <div
         style={{
           marginTop: "18px",
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "15px",
+          padding: "14px 18px",
+          borderRadius: "10px",
+          background:
+            "rgba(131,153,88,0.08)",
+          color: "#B8C3A0",
+          fontSize: "11px",
+          lineHeight: 1.6,
         }}
       >
-        {/* Model Confidence */}
-
-        <div
+        <strong
           style={{
-            padding: "18px",
-            borderRadius: "17px",
-            background: "#0A3323",
-            border:
-              "1px solid rgba(131,153,88,0.3)",
+            color: "#F7F4D5",
           }}
         >
-          <div
-            style={{
-              color: "#B8C3A0",
-              fontSize: "10px",
-              fontWeight: "700",
-            }}
-          >
-            MODEL CONFIDENCE
-          </div>
-
-          <div
-            style={{
-              color: "#F7F4D5",
-              fontSize: "24px",
-              fontWeight: "900",
-              marginTop: "5px",
-            }}
-          >
-            {prediction.confidence}%
-          </div>
-
-          <div
-            style={{
-              marginTop: "8px",
-              height: "5px",
-              borderRadius: "10px",
-              background:
-                "rgba(247,244,213,0.1)",
-            }}
-          >
-            <div
-              style={{
-                width: `${prediction.confidence}%`,
-                height: "100%",
-                borderRadius: "10px",
-                background: "#839958",
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Prediction Status */}
-
-        <div
-          style={{
-            padding: "18px",
-            borderRadius: "17px",
-            background: "#0A3323",
-            border:
-              "1px solid rgba(131,153,88,0.3)",
-          }}
-        >
-          <div
-            style={{
-              color: "#B8C3A0",
-              fontSize: "10px",
-              fontWeight: "700",
-            }}
-          >
-            PREDICTION STATUS
-          </div>
-
-          <div
-            style={{
-              color: "#839958",
-              fontSize: "18px",
-              fontWeight: "900",
-              marginTop: "8px",
-            }}
-          >
-            ● {prediction.status}
-          </div>
-
-          <div
-            style={{
-              color: "#B8C3A0",
-              fontSize: "10px",
-              marginTop: "4px",
-            }}
-          >
-            Continuous monitoring enabled
-          </div>
-        </div>
-
-        {/* Last Model Update */}
-
-        <div
-          style={{
-            padding: "18px",
-            borderRadius: "17px",
-            background: "#0A3323",
-            border:
-              "1px solid rgba(131,153,88,0.3)",
-          }}
-        >
-          <div
-            style={{
-              color: "#B8C3A0",
-              fontSize: "10px",
-              fontWeight: "700",
-            }}
-          >
-            LAST MODEL UPDATE
-          </div>
-
-          <div
-            style={{
-              color: "#F7F4D5",
-              fontSize: "18px",
-              fontWeight: "900",
-              marginTop: "8px",
-            }}
-          >
-            {prediction.lastUpdate}
-          </div>
-
-          <div
-            style={{
-              color: "#B8C3A0",
-              fontSize: "10px",
-              marginTop: "4px",
-            }}
-          >
-            Environmental data refreshed
-          </div>
-        </div>
+          LANDGUARD AI:
+        </strong>{" "}
+        Prediction is generated by the trained
+        Random Forest landslide-risk model using
+        environmental, terrain, land-cover and
+        seismic features.
       </div>
     </section>
   );
 }
+
+function InputField({
+  label,
+  name,
+  value,
+  onChange,
+}) {
+  return (
+    <div>
+      <label
+        style={{
+          display: "block",
+          color: "#B8C3A0",
+          fontSize: "12px",
+          fontWeight: "700",
+          marginBottom: "6px",
+        }}
+      >
+        {label}
+      </label>
+
+      <input
+        type="number"
+        name={name}
+        value={value}
+        onChange={onChange}
+        style={inputStyle}
+      />
+    </div>
+  );
+}
+
+const inputStyle = {
+  width: "100%",
+  boxSizing: "border-box",
+  padding: "10px 11px",
+  borderRadius: "8px",
+  border:
+    "1px solid rgba(131,153,88,0.3)",
+  background: "rgba(0,0,0,0.2)",
+  color: "#F7F4D5",
+  outline: "none",
+  fontSize: "13px",
+};
 
 export default RiskPrediction;

@@ -1,503 +1,938 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-function OfflineMode({ selectedZone }) {
-  const [isOnline, setIsOnline] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [lastSync, setLastSync] = useState("10 minutes ago");
-  const [pendingReports, setPendingReports] = useState(3);
+const API_BASE = "http://localhost:5000";
 
-  // Handle Sync button
-  const handleSync = () => {
-    if (!isOnline) {
-      alert("You are currently offline. Please connect to the internet.");
+const STORAGE_KEY = "landguard_offline_reports";
+
+function OfflineMode() {
+  const [isOnline, setIsOnline] = useState(
+    navigator.onLine
+  );
+
+  const [serverStatus, setServerStatus] =
+    useState(null);
+
+  const [offlineReports, setOfflineReports] =
+    useState([]);
+
+  const [syncing, setSyncing] =
+    useState(false);
+
+  const [message, setMessage] =
+    useState("");
+
+  const [error, setError] =
+    useState("");
+
+  /*
+   * Load reports saved locally.
+   */
+  const loadOfflineReports = () => {
+    try {
+      const stored =
+        localStorage.getItem(STORAGE_KEY);
+
+      if (!stored) {
+        setOfflineReports([]);
+        return;
+      }
+
+      const reports = JSON.parse(stored);
+
+      if (Array.isArray(reports)) {
+        setOfflineReports(reports);
+      } else {
+        setOfflineReports([]);
+      }
+    } catch (err) {
+      console.error(
+        "Unable to load offline reports:",
+        err
+      );
+
+      setOfflineReports([]);
+    }
+  };
+
+  /*
+   * Save reports to browser storage.
+   */
+  const saveOfflineReports = (reports) => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(reports)
+    );
+
+    setOfflineReports(reports);
+  };
+
+  /*
+   * Check LANDGUARD backend.
+   */
+  const checkServerStatus = async () => {
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/sync/status`
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ||
+            "Server status request failed."
+        );
+      }
+
+      const result =
+        data.data &&
+        typeof data.data === "object"
+          ? data.data
+          : data;
+
+      setServerStatus(result);
+      setError("");
+
+      return true;
+    } catch (err) {
+      console.error(
+        "LANDGUARD server status error:",
+        err
+      );
+
+      setServerStatus({
+        server_online: false,
+        sync_status: "OFFLINE",
+        total_reports: 0,
+        pending_reports: 0,
+        verified_reports: 0,
+      });
+
+      return false;
+    }
+  };
+
+  /*
+   * Browser online/offline detection.
+   */
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      setMessage(
+        "Internet connection restored."
+      );
+      checkServerStatus();
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      setMessage(
+        "You are offline. Reports can be stored locally."
+      );
+    };
+
+    window.addEventListener(
+      "online",
+      handleOnline
+    );
+
+    window.addEventListener(
+      "offline",
+      handleOffline
+    );
+
+    loadOfflineReports();
+    checkServerStatus();
+
+    return () => {
+      window.removeEventListener(
+        "online",
+        handleOnline
+      );
+
+      window.removeEventListener(
+        "offline",
+        handleOffline
+      );
+    };
+  }, []);
+
+  /*
+   * Add a demo offline report.
+   *
+   * This demonstrates how a field report can
+   * be stored locally when the connection is
+   * unavailable.
+   */
+  const addOfflineTestReport = () => {
+    const newReport = {
+      local_id:
+        `OFFLINE-${Date.now()}`,
+
+      report_type:
+        "FIELD_OBSERVATION",
+
+      hazard_type:
+        "LANDSLIDE",
+
+      description:
+        "Offline field observation recorded by LANDGUARD.",
+
+      latitude: null,
+
+      longitude: null,
+
+      severity: "HIGH",
+
+      weather: "Heavy Rain",
+
+      image_url: null,
+
+      user_id: "FIELD_USER",
+
+      created_at:
+        new Date().toISOString(),
+    };
+
+    const updatedReports = [
+      ...offlineReports,
+      newReport,
+    ];
+
+    saveOfflineReports(updatedReports);
+
+    setMessage(
+      "Field report saved locally and waiting for synchronization."
+    );
+
+    setError("");
+  };
+
+  /*
+   * Synchronize local reports with backend.
+   */
+  const syncReports = async () => {
+    if (offlineReports.length === 0) {
+      setMessage(
+        "There are no offline reports waiting for synchronization."
+      );
+
       return;
     }
 
-    setIsSyncing(true);
+    setSyncing(true);
+    setMessage("");
+    setError("");
 
-    // Simulate synchronization
-    setTimeout(() => {
-      setIsSyncing(false);
-      setLastSync("Just now");
-      setPendingReports(0);
-    }, 2000);
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/sync`,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify({
+            reports: offlineReports,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      console.log(
+        "LANDGUARD sync response:",
+        data
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ||
+            data.message ||
+            "Synchronization failed."
+        );
+      }
+
+      const result =
+        data.data &&
+        typeof data.data === "object"
+          ? data.data
+          : data;
+
+      const synced =
+        Number(result.synced) || 0;
+
+      const failed =
+        Number(result.failed) || 0;
+
+      /*
+       * Remove successfully synchronized
+       * reports from local storage.
+       *
+       * The backend returns the index of each
+       * successfully synchronized report.
+       */
+      const failedIndexes = new Set(
+        Array.isArray(result.results)
+          ? result.results
+              .filter(
+                (item) =>
+                  item.status === "FAILED"
+              )
+              .map(
+                (item) =>
+                  Number(item.index)
+              )
+          : []
+      );
+
+      const remainingReports =
+        offlineReports.filter(
+          (_, index) =>
+            failedIndexes.has(index)
+        );
+
+      saveOfflineReports(
+        remainingReports
+      );
+
+      setMessage(
+        `Synchronization complete: ${synced} report(s) synced, ${failed} failed.`
+      );
+
+      await checkServerStatus();
+    } catch (err) {
+      console.error(
+        "LANDGUARD synchronization error:",
+        err
+      );
+
+      setError(
+        err.message ||
+          "Unable to synchronize reports."
+      );
+    } finally {
+      setSyncing(false);
+    }
   };
+
+  const clearLocalReports = () => {
+    if (offlineReports.length === 0) {
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        "Clear all locally stored offline reports?"
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    saveOfflineReports([]);
+
+    setMessage(
+      "Local offline reports cleared."
+    );
+
+    setError("");
+  };
+
+  const serverOnline =
+    serverStatus?.server_online === true;
 
   return (
     <section
+      id="offline-mode"
       style={{
         maxWidth: "1400px",
         margin: "0 auto",
-        padding: "20px 40px 50px",
+        padding: "20px 40px 60px",
+        scrollMarginTop: "95px",
       }}
     >
-      {/* ================= HEADER ================= */}
-
-      <div style={{ marginBottom: "25px" }}>
+      {/* HEADER */}
+      <div
+        style={{
+          marginBottom: "24px",
+        }}
+      >
         <p
           style={{
-            color: "#4ade80",
+            color: "#839958",
             fontSize: "13px",
-            fontWeight: "bold",
+            fontWeight: "800",
             letterSpacing: "2px",
-            marginBottom: "6px",
+            marginBottom: "7px",
           }}
         >
-          FIELD CONNECTIVITY
+          RESILIENT FIELD OPERATIONS
         </p>
 
         <h2
           style={{
-            color: "#ffffff",
-            fontSize: "28px",
-            marginBottom: "6px",
+            color: "#F7F4D5",
+            fontSize: "30px",
+            margin: 0,
+            fontWeight: "800",
           }}
         >
-          📡 Offline Mode
+          Offline Mode
         </h2>
 
         <p
           style={{
-            color: "#a7f3d0",
-            fontSize: "14px",
+            color: "#B8C3A0",
+            marginTop: "7px",
+            fontSize: "15px",
           }}
         >
-          Continue field operations even when network connectivity is limited.
+          Continue recording field observations
+          even when network connectivity is
+          unavailable.
         </p>
-
-        {/* Selected Zone */}
-
-        {selectedZone && (
-          <div
-            style={{
-              marginTop: "15px",
-              padding: "12px 16px",
-              borderRadius: "12px",
-              background: "rgba(74,222,128,0.08)",
-              border: "1px solid rgba(74,222,128,0.2)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "15px",
-              flexWrap: "wrap",
-            }}
-          >
-            <div>
-              <span
-                style={{
-                  color: "#86efac",
-                  fontSize: "10px",
-                  fontWeight: "bold",
-                  letterSpacing: "1.5px",
-                }}
-              >
-                FIELD OPERATIONS FOR
-              </span>
-
-              <div
-                style={{
-                  color: "#ffffff",
-                  fontSize: "16px",
-                  fontWeight: "bold",
-                  marginTop: "4px",
-                }}
-              >
-                {selectedZone.name}
-              </div>
-            </div>
-
-            <div
-              style={{
-                color: "#4ade80",
-                fontSize: "12px",
-                fontWeight: "bold",
-                padding: "7px 12px",
-                borderRadius: "8px",
-                background: "rgba(74,222,128,0.1)",
-                border: "1px solid rgba(74,222,128,0.2)",
-              }}
-            >
-              ZONE ID: {selectedZone.id}
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* ================= MAIN CARD ================= */}
+      {/* STATUS CARDS */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns:
+            "repeat(3, minmax(0, 1fr))",
+          gap: "15px",
+          marginBottom: "20px",
+        }}
+      >
+        {/* INTERNET */}
+        <StatusCard
+          title="Internet"
+          value={
+            isOnline
+              ? "ONLINE"
+              : "OFFLINE"
+          }
+          description={
+            isOnline
+              ? "Browser connection available"
+              : "Local storage mode active"
+          }
+          active={isOnline}
+        />
 
+        {/* SERVER */}
+        <StatusCard
+          title="LANDGUARD Server"
+          value={
+            serverOnline
+              ? "CONNECTED"
+              : "UNAVAILABLE"
+          }
+          description={
+            serverOnline
+              ? serverStatus?.sync_status ||
+                "Ready for synchronization"
+              : "Waiting for backend connection"
+          }
+          active={serverOnline}
+        />
+
+        {/* LOCAL QUEUE */}
+        <StatusCard
+          title="Offline Queue"
+          value={
+            String(offlineReports.length)
+          }
+          description={
+            offlineReports.length === 1
+              ? "Report waiting"
+              : "Reports waiting"
+          }
+          active={
+            offlineReports.length > 0
+          }
+        />
+      </div>
+
+      {/* MAIN CARD */}
       <div
         style={{
           background:
-            "linear-gradient(145deg, rgba(6,78,59,0.8), rgba(5,46,22,0.95))",
+            "linear-gradient(145deg, #105666, #0A3323)",
+          border:
+            "1px solid rgba(131,153,88,0.25)",
           borderRadius: "22px",
-          border: "1px solid rgba(74,222,128,0.2)",
-          boxShadow: "0 12px 35px rgba(0,0,0,0.3)",
-          padding: "30px",
+          padding: "28px",
+          boxShadow:
+            "0 18px 45px rgba(0,0,0,0.2)",
         }}
       >
-        {/* ================= STATUS HEADER ================= */}
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: "20px",
-            flexWrap: "wrap",
-            marginBottom: "25px",
-          }}
-        >
-          <div>
-            <h3
-              style={{
-                color: "#ffffff",
-                fontSize: "21px",
-                marginBottom: "5px",
-              }}
-            >
-              🌐 Connectivity Status
-            </h3>
-
-            <p
-              style={{
-                color: "#86efac",
-                fontSize: "12px",
-              }}
-            >
-              Network and synchronization information
-            </p>
-
-            {selectedZone && (
-              <p
-                style={{
-                  color: "#4ade80",
-                  fontSize: "11px",
-                  marginTop: "5px",
-                }}
-              >
-                Zone ID: {selectedZone.id}
-              </p>
-            )}
-          </div>
-
-          {/* Online / Offline Toggle */}
-
-          <button
-            onClick={() => setIsOnline(!isOnline)}
-            style={{
-              border: isOnline
-                ? "1px solid rgba(74,222,128,0.4)"
-                : "1px solid rgba(248,113,113,0.4)",
-              backgroundColor: isOnline
-                ? "rgba(34,197,94,0.12)"
-                : "rgba(239,68,68,0.12)",
-              color: isOnline ? "#86efac" : "#fca5a5",
-              padding: "9px 16px",
-              borderRadius: "20px",
-              fontSize: "12px",
-              fontWeight: "bold",
-              cursor: "pointer",
-            }}
-          >
-            {isOnline ? "🟢 ONLINE" : "🔴 OFFLINE"}
-          </button>
-        </div>
-
-        {/* ================= STATUS CARDS ================= */}
-
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "18px",
+            gridTemplateColumns:
+              "1fr 1fr",
+            gap: "22px",
           }}
         >
-          {/* Network Status */}
-
-          <div
-            style={{
-              backgroundColor: "rgba(255,255,255,0.04)",
-              borderRadius: "16px",
-              padding: "22px",
-              border: "1px solid rgba(167,243,208,0.1)",
-            }}
-          >
-            <p
-              style={{
-                color: "#a7f3d0",
-                fontSize: "12px",
-                marginBottom: "10px",
-              }}
-            >
-              📶 Network Status
-            </p>
-
+          {/* LEFT */}
+          <div>
             <h3
               style={{
-                color: isOnline ? "#4ade80" : "#f87171",
-                fontSize: "25px",
-                margin: 0,
+                color: "#F7F4D5",
+                margin: "0 0 8px",
+                fontSize: "20px",
               }}
             >
-              {isOnline ? "Online" : "Offline"}
+              Field Data Synchronization
             </h3>
 
             <p
               style={{
-                color: isOnline ? "#86efac" : "#fca5a5",
-                fontSize: "11px",
-                marginTop: "6px",
-              }}
-            >
-              {isOnline
-                ? "Internet connection available"
-                : "Working in offline mode"}
-            </p>
-          </div>
-
-          {/* Last Sync */}
-
-          <div
-            style={{
-              backgroundColor: "rgba(255,255,255,0.04)",
-              borderRadius: "16px",
-              padding: "22px",
-              border: "1px solid rgba(167,243,208,0.1)",
-            }}
-          >
-            <p
-              style={{
-                color: "#a7f3d0",
+                color: "#9FAC8E",
                 fontSize: "12px",
-                marginBottom: "10px",
+                lineHeight: "1.6",
+                marginTop: 0,
               }}
             >
-              🔄 Last Data Sync
+              Reports created while offline are
+              stored temporarily in this browser.
+              When connectivity returns, they can
+              be sent to the LANDGUARD backend.
             </p>
 
-            <h3
-              style={{
-                color: "#ffffff",
-                fontSize: "22px",
-                margin: 0,
-              }}
-            >
-              {lastSync}
-            </h3>
-
-            <p
-              style={{
-                color: "#86efac",
-                fontSize: "11px",
-                marginTop: "6px",
-              }}
-            >
-              Data synchronization status
-            </p>
-
-            {selectedZone && (
-              <p
-                style={{
-                  color: "#4ade80",
-                  fontSize: "10px",
-                  marginTop: "5px",
-                }}
-              >
-                Zone: {selectedZone.id}
-              </p>
-            )}
-          </div>
-
-          {/* Pending Reports */}
-
-          <div
-            style={{
-              backgroundColor: "rgba(255,255,255,0.04)",
-              borderRadius: "16px",
-              padding: "22px",
-              border: "1px solid rgba(167,243,208,0.1)",
-            }}
-          >
-            <p
-              style={{
-                color: "#a7f3d0",
-                fontSize: "12px",
-                marginBottom: "10px",
-              }}
-            >
-              📋 Pending Reports
-            </p>
-
-            <h3
-              style={{
-                color: pendingReports > 0 ? "#fbbf24" : "#4ade80",
-                fontSize: "25px",
-                margin: 0,
-              }}
-            >
-              {pendingReports}
-            </h3>
-
-            <p
-              style={{
-                color: pendingReports > 0 ? "#fcd34d" : "#86efac",
-                fontSize: "11px",
-                marginTop: "6px",
-              }}
-            >
-              {pendingReports > 0
-                ? "Reports waiting for sync"
-                : "All reports synchronized"}
-            </p>
-          </div>
-        </div>
-
-        {/* ================= OFFLINE OPERATION ================= */}
-
-        <div
-          style={{
-            marginTop: "25px",
-            background:
-              "linear-gradient(145deg, rgba(30,64,175,0.25), rgba(23,37,84,0.35))",
-            borderRadius: "18px",
-            padding: "25px",
-            border: "1px solid rgba(147,197,253,0.15)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-start",
-              gap: "15px",
-            }}
-          >
+            {/* LOCAL QUEUE */}
             <div
               style={{
-                width: "48px",
-                height: "48px",
-                borderRadius: "13px",
-                backgroundColor: "rgba(59,130,246,0.15)",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                fontSize: "22px",
-                flexShrink: 0,
+                marginTop: "20px",
+                padding: "18px",
+                borderRadius: "14px",
+                background:
+                  "rgba(0,0,0,0.18)",
+                border:
+                  "1px solid rgba(247,244,213,0.08)",
               }}
             >
-              📱
-            </div>
-
-            <div>
-              <h3
+              <div
                 style={{
-                  color: "#ffffff",
-                  fontSize: "19px",
-                  marginBottom: "6px",
-                }}
-              >
-                Field Operations Mode
-              </h3>
-
-              <p
-                style={{
-                  color: "#bfdbfe",
-                  fontSize: "13px",
-                  lineHeight: "1.7",
-                }}
-              >
-                Field workers can continue recording landslide observations
-                even when internet connectivity is unavailable. Reports can
-                be stored locally and synchronized when the network becomes
-                available.
-              </p>
-
-              {selectedZone && (
-                <p
-                  style={{
-                    color: "#93c5fd",
-                    fontSize: "11px",
-                    marginTop: "10px",
-                    fontWeight: "bold",
-                  }}
-                >
-                  📍 Offline reports will be associated with Zone ID:{" "}
-                  {selectedZone.id}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* ================= SYNC SECTION ================= */}
-
-        <div
-          style={{
-            marginTop: "25px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: "20px",
-            flexWrap: "wrap",
-          }}
-        >
-          <div>
-            <p
-              style={{
-                color: "#d1fae5",
-                fontSize: "14px",
-                fontWeight: "bold",
-              }}
-            >
-              🔄 Data Synchronization
-            </p>
-
-            <p
-              style={{
-                color: "#86efac",
-                fontSize: "12px",
-                marginTop: "4px",
-              }}
-            >
-              Sync pending field reports with the central system.
-            </p>
-
-            {selectedZone && (
-              <p
-                style={{
-                  color: "#4ade80",
+                  color: "#839958",
                   fontSize: "11px",
+                  fontWeight: "900",
+                  letterSpacing: "1px",
+                }}
+              >
+                LOCAL REPORT QUEUE
+              </div>
+
+              <div
+                style={{
+                  color: "#F7F4D5",
+                  fontSize: "36px",
+                  fontWeight: "900",
                   marginTop: "5px",
                 }}
               >
-                Synchronizing data for Zone ID: {selectedZone.id}
-              </p>
-            )}
+                {offlineReports.length}
+              </div>
+
+              <div
+                style={{
+                  color: "#9FAC8E",
+                  fontSize: "11px",
+                }}
+              >
+                report(s) waiting to sync
+              </div>
+            </div>
+
+            {/* BUTTONS */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "1fr 1fr",
+                gap: "12px",
+                marginTop: "18px",
+              }}
+            >
+              <button
+                type="button"
+                onClick={syncReports}
+                disabled={
+                  syncing ||
+                  offlineReports.length === 0 ||
+                  !serverOnline
+                }
+                style={{
+                  padding: "13px",
+                  border: "none",
+                  borderRadius: "10px",
+                  background:
+                    syncing ||
+                    offlineReports.length === 0 ||
+                    !serverOnline
+                      ? "#596344"
+                      : "#839958",
+                  color: "#FFFFFF",
+                  cursor:
+                    syncing ||
+                    offlineReports.length === 0 ||
+                    !serverOnline
+                      ? "not-allowed"
+                      : "pointer",
+                  fontSize: "12px",
+                  fontWeight: "900",
+                }}
+              >
+                {syncing
+                  ? "SYNCING..."
+                  : "SYNC NOW"}
+              </button>
+
+              <button
+                type="button"
+                onClick={
+                  addOfflineTestReport
+                }
+                style={{
+                  padding: "13px",
+                  borderRadius: "10px",
+                  border:
+                    "1px solid rgba(131,153,88,0.4)",
+                  background:
+                    "rgba(131,153,88,0.08)",
+                  color: "#F7F4D5",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  fontWeight: "900",
+                }}
+              >
+                SAVE TEST REPORT
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={
+                clearLocalReports
+              }
+              disabled={
+                offlineReports.length === 0
+              }
+              style={{
+                width: "100%",
+                marginTop: "10px",
+                padding: "11px",
+                borderRadius: "10px",
+                border:
+                  "1px solid rgba(224,123,112,0.3)",
+                background:
+                  "transparent",
+                color:
+                  offlineReports.length === 0
+                    ? "#596344"
+                    : "#D9A09A",
+                cursor:
+                  offlineReports.length === 0
+                    ? "not-allowed"
+                    : "pointer",
+                fontSize: "11px",
+                fontWeight: "800",
+              }}
+            >
+              CLEAR LOCAL QUEUE
+            </button>
           </div>
 
-          <button
-            onClick={handleSync}
-            disabled={isSyncing}
-            style={{
-              padding: "13px 25px",
-              border: "none",
-              borderRadius: "11px",
-              background: isSyncing
-                ? "#166534"
-                : "linear-gradient(135deg, #22c55e, #16a34a)",
-              color: "#052e16",
-              fontWeight: "bold",
-              fontSize: "14px",
-              cursor: isSyncing ? "not-allowed" : "pointer",
-              boxShadow: "0 6px 20px rgba(34,197,94,0.25)",
-              opacity: isSyncing ? 0.7 : 1,
-            }}
-          >
-            {isSyncing ? "⏳ Syncing..." : "🔄 Sync Data"}
-          </button>
+          {/* RIGHT */}
+          <div>
+            <h3
+              style={{
+                color: "#F7F4D5",
+                margin: "0 0 15px",
+                fontSize: "18px",
+              }}
+            >
+              Server Information
+            </h3>
+
+            <InfoRow
+              label="Server"
+              value={
+                serverOnline
+                  ? "ONLINE"
+                  : "OFFLINE"
+              }
+            />
+
+            <InfoRow
+              label="Sync Status"
+              value={
+                serverStatus?.sync_status ||
+                "UNKNOWN"
+              }
+            />
+
+            <InfoRow
+              label="Total Reports"
+              value={
+                serverStatus?.total_reports ??
+                0
+              }
+            />
+
+            <InfoRow
+              label="Pending Reports"
+              value={
+                serverStatus?.pending_reports ??
+                0
+              }
+            />
+
+            <InfoRow
+              label="Verified Reports"
+              value={
+                serverStatus?.verified_reports ??
+                0
+              }
+            />
+
+            <InfoRow
+              label="Last Report Received"
+              value={
+                serverStatus?.last_report_received
+                  ? formatDate(
+                      serverStatus.last_report_received
+                    )
+                  : "No reports yet"
+              }
+            />
+
+            <div
+              style={{
+                marginTop: "18px",
+                padding: "15px",
+                borderRadius: "12px",
+                background:
+                  "rgba(131,153,88,0.09)",
+                border:
+                  "1px solid rgba(131,153,88,0.2)",
+              }}
+            >
+              <div
+                style={{
+                  color: "#839958",
+                  fontSize: "11px",
+                  fontWeight: "900",
+                }}
+              >
+                RESILIENT DESIGN
+              </div>
+
+              <p
+                style={{
+                  color: "#9FAC8E",
+                  fontSize: "11px",
+                  lineHeight: "1.6",
+                  marginBottom: 0,
+                }}
+              >
+                Field teams can continue collecting
+                observations during connectivity
+                interruptions. Data remains queued
+                locally until synchronization is
+                available.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* MESSAGE */}
+      {message && (
+        <div
+          style={{
+            marginTop: "15px",
+            padding: "13px 15px",
+            borderRadius: "10px",
+            background:
+              "rgba(131,153,88,0.1)",
+            border:
+              "1px solid rgba(131,153,88,0.3)",
+            color: "#B8C3A0",
+            fontSize: "12px",
+          }}
+        >
+          ✓ {message}
+        </div>
+      )}
+
+      {/* ERROR */}
+      {error && (
+        <div
+          style={{
+            marginTop: "15px",
+            padding: "13px 15px",
+            borderRadius: "10px",
+            background:
+              "rgba(184,58,58,0.14)",
+            border:
+              "1px solid rgba(184,58,58,0.4)",
+            color: "#F0B4B4",
+            fontSize: "12px",
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      <p
+        style={{
+          color: "#7F8C72",
+          fontSize: "11px",
+          marginTop: "14px",
+          textAlign: "right",
+        }}
+      >
+        Connected to LANDGUARD synchronization
+        service.
+      </p>
     </section>
   );
+}
+
+/* =====================================================
+   STATUS CARD
+===================================================== */
+
+function StatusCard({
+  title,
+  value,
+  description,
+  active,
+}) {
+  return (
+    <div
+      style={{
+        background:
+          "rgba(10,51,35,0.75)",
+        border:
+          "1px solid rgba(131,153,88,0.22)",
+        borderRadius: "15px",
+        padding: "18px",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+        }}
+      >
+        <span
+          style={{
+            width: "8px",
+            height: "8px",
+            borderRadius: "50%",
+            background: active
+              ? "#839958"
+              : "#B83A3A",
+            boxShadow: active
+              ? "0 0 9px rgba(131,153,88,0.8)"
+              : "none",
+          }}
+        />
+
+        <span
+          style={{
+            color: "#9FAC8E",
+            fontSize: "10px",
+            fontWeight: "800",
+            letterSpacing: "1px",
+          }}
+        >
+          {title}
+        </span>
+      </div>
+
+      <div
+        style={{
+          color: "#F7F4D5",
+          fontSize: "21px",
+          fontWeight: "900",
+          marginTop: "10px",
+        }}
+      >
+        {value}
+      </div>
+
+      <div
+        style={{
+          color: "#7F8C72",
+          fontSize: "10px",
+          marginTop: "3px",
+        }}
+      >
+        {description}
+      </div>
+    </div>
+  );
+}
+
+/* =====================================================
+   INFO ROW
+===================================================== */
+
+function InfoRow({
+  label,
+  value,
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        gap: "15px",
+        padding: "12px 0",
+        borderBottom:
+          "1px solid rgba(247,244,213,0.07)",
+      }}
+    >
+      <span
+        style={{
+          color: "#84927A",
+          fontSize: "11px",
+        }}
+      >
+        {label}
+      </span>
+
+      <span
+        style={{
+          color: "#F7F4D5",
+          fontSize: "11px",
+          fontWeight: "800",
+          textAlign: "right",
+        }}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+/* =====================================================
+   DATE FORMAT
+===================================================== */
+
+function formatDate(value) {
+  try {
+    return new Date(value).toLocaleString();
+  } catch {
+    return String(value);
+  }
 }
 
 export default OfflineMode;

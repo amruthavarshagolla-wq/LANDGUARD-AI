@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
-import { getDashboardSummary } from "../lib/api";
 
 function Dashboard() {
-<<<<<<< HEAD
-  const [riskScore, setRiskScore] = useState(38);
-=======
   const [dashboardData, setDashboardData] = useState(null);
 
 useEffect(() => {
@@ -24,43 +20,7 @@ const riskScore = Number(
   dashboardData?.risk_zones?.maximum_risk_score ?? 0
 );
 
->>>>>>> 49090aa (Integrate dashboard with backend API)
   const [animatedScore, setAnimatedScore] = useState(0);
-  const [stats, setStats] = useState([
-    {
-      icon: "🌍",
-      value: "22,615",
-      label: "Monitored Zones",
-      description: "East Khasi Hills grid cells",
-    },
-    {
-      icon: "🚨",
-      value: "2",
-      label: "Active Alerts",
-      description: "Requires attention",
-    },
-    {
-      icon: "🔴",
-      value: "142",
-      label: "Critical Zones",
-      description: "Immediate monitoring",
-    },
-  ]);
-
-  useEffect(() => {
-    getDashboardSummary()
-      .then((res) => {
-        if (res && res.data) {
-          if (res.data.average_risk_score !== undefined) {
-            setRiskScore(Math.round(res.data.average_risk_score));
-          }
-          if (res.data.stats && res.data.stats.length > 0) {
-            setStats(res.data.stats);
-          }
-        }
-      })
-      .catch((err) => console.warn("Dashboard summary fetch failed, using cached values:", err));
-  }, []);
 
   useEffect(() => {
     let current = 0;
@@ -84,25 +44,53 @@ const riskScore = Number(
   let riskBorder;
   let riskLabel;
 
-  if (riskScore >= 70) {
-    riskColor = "#D3968C";
-    riskBackground =
-      "linear-gradient(145deg, rgba(120,45,40,0.92), rgba(65,25,25,0.98))";
-    riskBorder = "rgba(211,150,140,0.55)";
-    riskLabel = "HIGH";
-  } else if (riskScore >= 40) {
-    riskColor = "#D9A441";
-    riskBackground =
-      "linear-gradient(145deg, rgba(110,80,25,0.9), rgba(55,45,20,0.98))";
-    riskBorder = "rgba(217,164,65,0.5)";
-    riskLabel = "MEDIUM";
-  } else {
-    riskColor = "#839958";
-    riskBackground =
-      "linear-gradient(145deg, rgba(55,85,40,0.9), rgba(20,50,30,0.98))";
-    riskBorder = "rgba(131,153,88,0.5)";
-    riskLabel = "LOW";
-  }
+   if (riskScore >= 75) {
+  riskColor = "#D3968C";
+  riskBackground =
+    "linear-gradient(145deg, rgba(120,45,40,0.92), rgba(65,25,25,0.98))";
+  riskBorder = "rgba(211,150,140,0.55)";
+  riskLabel = "VERY HIGH";
+} else if (riskScore >= 50) {
+  riskColor = "#D9A441";
+  riskBackground =
+    "linear-gradient(145deg, rgba(110,80,25,0.9), rgba(55,45,20,0.98))";
+  riskBorder = "rgba(217,164,65,0.5)";
+  riskLabel = "HIGH";
+} else if (riskScore >= 25) {
+  riskColor = "#D9A441";
+  riskBackground =
+    "linear-gradient(145deg, rgba(110,80,25,0.9), rgba(55,45,20,0.98))";
+  riskBorder = "rgba(217,164,65,0.5)";
+  riskLabel = "MODERATE";
+} else {
+  riskColor = "#839958";
+  riskBackground =
+    "linear-gradient(145deg, rgba(55,85,40,0.9), rgba(20,50,30,0.98))";
+  riskBorder = "rgba(131,153,88,0.5)";
+  riskLabel = "LOW";
+}
+  const stats = [
+    {
+      icon: "🌍",
+      value:  dashboardData?.risk_zones?.total ?? 0,
+      label: "Areas Monitored",
+      description: "GIS monitored regions",
+    },
+    {
+      icon: "🚨",
+      value:  dashboardData?.active_alerts ?? 0,
+      label: "Active Alerts",
+      description: "Requires attention",
+    },
+    {
+      icon: "🔴",
+      value: dashboardData?.risk_zones?.very_high?? 0,
+      label: "Critical Zones",
+      description: "Immediate monitoring",
+    },
+  ];
+
+  return (
     <section
       style={{
         minHeight: "calc(100vh - 80px)",

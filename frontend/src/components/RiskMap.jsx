@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+
 import {
   MapContainer,
   TileLayer,
@@ -12,207 +13,316 @@ import {
 import L from "leaflet";
 
 import "leaflet/dist/leaflet.css";
-import { getRiskCurrent } from "../lib/api";
 
-function RiskMap() {
-  const [selectedZone, setSelectedZone] = useState(null);
-  const [zones, setZones] = useState([
-    {
-      id: "EKH_08421",
-      name: "Zone EKH_08421",
-      level: "CRITICAL",
-      score: 82,
-      rainfall: "210 mm",
-      soilMoisture: "84%",
-      coordinates: [25.50, 91.89],
-      color: "#e74c3c",
-      radius: 900,
-    },
+// =====================================================
+// RISK COLORS
+// =====================================================
 
-    {
-      id: "EKH_06120",
-      name: "Zone EKH_06120",
-      level: "HIGH",
-      score: 68,
-      rainfall: "175 mm",
-      soilMoisture: "74%",
-      coordinates: [25.42, 91.82],
-      color: "#e67e22",
-      radius: 900,
-    },
+const RISK_COLORS = {
+  CRITICAL: "#B83A3A",
+  HIGH: "#E07A32",
+  MODERATE: "#D6A84F",
+  LOW: "#5C8D45",
+};
 
-    {
-      id: "EKH_03410",
-      name: "Zone EKH_03410",
-      level: "LOW",
-      score: 22,
-      rainfall: "80 mm",
-      soilMoisture: "38%",
-      coordinates: [25.57, 91.95],
-      color: "#839958",
-      radius: 900,
-    },
-  ]);
+// =====================================================
+// MARKER ICON
+// =====================================================
+
+const createRiskIcon = (color) =>
+  L.divIcon({
+    className: "",
+    html: `<div style="width:18px;height:18px;background:${color};border:3px solid white;border-radius:50%;box-shadow:0 0 14px ${color};"></div>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+  });
+
+const criticalIcon = createRiskIcon(RISK_COLORS.CRITICAL);
+const highIcon = createRiskIcon(RISK_COLORS.HIGH);
+const moderateIcon = createRiskIcon(RISK_COLORS.MODERATE);
+const lowIcon = createRiskIcon(RISK_COLORS.LOW);
+
+// =====================================================
+// RISK HELPERS
+// =====================================================
+
+const getRiskLevel = (riskLevel, score) => {
+  const level = String(riskLevel || "").toUpperCase();
+
+  if (level === "CRITICAL") return "CRITICAL";
+  if (level === "HIGH") return "HIGH";
+
+  if (level === "MODERATE" || level === "MEDIUM") {
+    return "MODERATE";
+  }
+
+  if (level === "LOW") return "LOW";
+
+  const numericScore = Number(score) || 0;
+
+  if (numericScore >= 75) return "CRITICAL";
+  if (numericScore >= 50) return "HIGH";
+  if (numericScore >= 25) return "MODERATE";
+
+  return "LOW";
+};
+
+const getRiskColor = (level) => {
+  return RISK_COLORS[level] || RISK_COLORS.LOW;
+};
+
+const getRadius = (level) => {
+  if (level === "CRITICAL") return 18000;
+  if (level === "HIGH") return 15000;
+  if (level === "MODERATE") return 13500;
+
+  return 12000;
+};
+
+const getStatus = (level) => {
+  if (level === "CRITICAL" || level === "HIGH") {
+    return "ACTIVE";
+  }
+
+  return "MONITORING";
+};
+
+const getAction = (level) => {
+  if (level === "CRITICAL") {
+    return "Immediate attention required";
+  }
+
+  if (level === "HIGH") {
+    return "Enhanced monitoring required";
+  }
+
+  if (level === "MODERATE") {
+    return "Regular monitoring required";
+  }
+
+  return "Routine monitoring";
+};
+
+const getMessage = (level) => {
+  if (level === "CRITICAL") {
+    return "AI analysis indicates severe landslide conditions. Maintain continuous monitoring and prepare emergency response.";
+  }
+
+  if (level === "HIGH") {
+    return "Environmental conditions show elevated landslide susceptibility. Continue close monitoring of this zone.";
+  }
+
+  if (level === "MODERATE") {
+    return "Environmental conditions indicate moderate landslide susceptibility. Continue regular monitoring.";
+  }
+
+  return "Current environmental conditions remain relatively stable. Continue regular monitoring.";
+};
+
+const getIcon = (level) => {
+  if (level === "CRITICAL") return criticalIcon;
+  if (level === "HIGH") return highIcon;
+  if (level === "MODERATE") return moderateIcon;
+
+  return lowIcon;
+};
+
+// =====================================================
+// RISK MAP
+// =====================================================
+
+function RiskMap({ selectedZone, onZoneSelect }) {
+  const [zones, setZones] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // ===================================================
+  // LOAD REAL RISK ZONES FROM BACKEND
+  // ===================================================
 
   useEffect(() => {
-    getRiskCurrent("HIGH,VERY_HIGH")
-      .then((res) => {
-        if (res && res.features && res.features.length > 0) {
-          const mapped = res.features.slice(0, 35).map((f, i) => {
-            const props = f.properties || {};
-            const coords = f.geometry?.coordinates?.[0] || [[91.89, 25.50]];
-            const avgLon = coords.reduce((sum, c) => sum + c[0], 0) / coords.length;
-            const avgLat = coords.reduce((sum, c) => sum + c[1], 0) / coords.length;
-            const cat = props.risk_category || "HIGH";
-            const color = cat === "VERY_HIGH" ? "#e74c3c" : "#e67e22";
+    let isMounted = true;
+
+    const loadRiskZones = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const response = await fetch("/api/risk-zones");
+
+        if (!response.ok) {
+          throw new Error(`Backend returned ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        const backendZones = Array.isArray(result)
+          ? result
+          : Array.isArray(result.data)
+          ? result.data
+          : [];
+
+        const formattedZones = backendZones
+          .map((zone) => {
+            const riskLevel = getRiskLevel(
+              zone.risk_level,
+              zone.risk_score
+            );
+
+            const latitude = Number(zone.latitude);
+            const longitude = Number(zone.longitude);
+
+            if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+              return null;
+            }
 
             return {
-              id: props.zone_id || `Z-${i}`,
-              name: `Zone ${props.zone_id || i}`,
-              level: cat === "VERY_HIGH" ? "CRITICAL" : "HIGH",
-              score: Math.round(props.risk_score || 75),
-              rainfall: "Heavy",
-              soilMoisture: "Elevated",
-              coordinates: [avgLat, avgLon],
-              color: color,
-              radius: 950,
+              id: String(zone.id),
+              name: zone.name || `Zone ${zone.id}`,
+              level: riskLevel,
+              score: Number(zone.risk_score) || 0,
+              rainfall: Number(zone.rainfall) || 0,
+              soilMoisture: Number(zone.soil_moisture) || 0,
+              position: [latitude, longitude],
+              color: getRiskColor(riskLevel),
+              radius: getRadius(riskLevel),
+              status: getStatus(riskLevel),
+              action: getAction(riskLevel),
+              message: getMessage(riskLevel),
             };
-          });
-          if (mapped.length > 0) {
-            setZones(mapped);
-          }
+          })
+          .filter(Boolean);
+
+        if (isMounted) {
+          setZones(formattedZones);
         }
-      })
-      .catch((err) => console.warn("Live risk zones fetch failed, keeping baseline:", err));
+      } catch (err) {
+        console.error("Failed to load risk zones:", err);
+
+        if (isMounted) {
+          setError(
+            "Unable to load risk zones. Please make sure the backend is running."
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadRiskZones();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // ===================================================
-  // SELECT ZONE
+  // MAP CENTER
   // ===================================================
 
-  const handleZoneSelect = (zone) => {
-    if (!onZoneSelect) {
-      return;
-    }
+  const defaultCenter = [16.5062, 80.648];
 
-    if (selectedZone?.id === zone.id) {
-      return;
-    }
-
-    onZoneSelect(zone);
-  };
+  const mapCenter =
+    zones.length > 0 ? zones[0].position : defaultCenter;
 
   // ===================================================
-  // MARKER ICON
+  // SELECTED ZONE
   // ===================================================
 
-  const getMarkerIcon = (level) => {
-    if (level === "CRITICAL") {
-      return criticalIcon;
-    }
-
-    if (level === "HIGH") {
-      return highIcon;
-    }
-
-    return lowIcon;
-  };
+  const selectedZoneData = zones.find(
+    (zone) => String(zone.id) === String(selectedZone)
+  );
 
   // ===================================================
-  // GO TO AI PREDICTION
+  // RENDER
   // ===================================================
-
-  const goToPrediction = () => {
-    const predictionSection =
-      document.getElementById("risk-prediction");
-
-    if (predictionSection) {
-      predictionSection.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }
-  };
 
   return (
     <section
-      id="risk-map"
       style={{
-        maxWidth: "1400px",
-        margin: "0 auto",
-        padding: "20px 40px 60px",
-        scrollMarginTop: "95px",
+        width: "100%",
+        padding: "30px",
+        boxSizing: "border-box",
+        background: "#101712",
+        borderRadius: "20px",
+        color: "white",
       }}
     >
-      {/* =================================================
-          HEADER
-      ================================================= */}
+      {/* HEADER */}
 
-      <div style={{ marginBottom: "25px" }}>
-        <p
-          style={{
-            color: "#839958",
-            fontSize: "13px",
-            fontWeight: "900",
-            letterSpacing: "2px",
-            margin: "0 0 7px",
-          }}
-        >
-          LIVE GIS RISK MONITORING
-        </p>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "20px",
+          gap: "20px",
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <h2
+            style={{
+              margin: 0,
+              fontSize: "28px",
+              fontWeight: "800",
+            }}
+          >
+            Landslide Risk Map
+          </h2>
 
-        <h2
-          style={{
-            color: "#F7F4D5",
-            fontSize: "30px",
-            margin: 0,
-            fontWeight: "800",
-          }}
-        >
-          Risk Map
-        </h2>
+          <p
+            style={{
+              marginTop: "8px",
+              marginBottom: 0,
+              color: "#AEB9A5",
+              fontSize: "14px",
+            }}
+          >
+            AI-powered risk zones from the LANDGUARD backend
+          </p>
+        </div>
 
-        <p
+        <div
           style={{
+            padding: "8px 14px",
+            borderRadius: "20px",
+            background: "#1B261D",
             color: "#B8C3A0",
-            fontSize: "15px",
-            marginTop: "7px",
+            fontSize: "12px",
+            fontWeight: "700",
           }}
         >
-          Explore monitored zones and their current
-          landslide risk levels.
-        </p>
+          {loading
+            ? "LOADING..."
+            : `${zones.length} RISK ZONE${zones.length === 1 ? "" : "S"}`}
+        </div>
       </div>
 
-      {/* =================================================
-          MAP
-      ================================================= */}
+      {/* MAP CONTAINER */}
 
       <div
         style={{
           position: "relative",
-          borderRadius: "22px",
+          width: "100%",
+          height: "620px",
+          borderRadius: "18px",
           overflow: "hidden",
-          border:
-            "1px solid rgba(131,153,88,0.25)",
-          boxShadow:
-            "0 12px 35px rgba(0,0,0,0.25)",
+          border: "1px solid #304033",
         }}
       >
         <MapContainer
-          center={[25.50, 91.89]}
-          zoom={10}
+          center={mapCenter}
+          zoom={8}
           zoomControl={false}
           style={{
-            height: "550px",
             width: "100%",
+            height: "100%",
           }}
         >
-          <ZoomControl position="topright" />
-
-          {/* =================================================
-              MAP LAYERS
-          ================================================= */}
+          {/* MAP LAYERS */}
 
           <LayersControl position="topright">
             <LayersControl.BaseLayer
@@ -220,7 +330,7 @@ function RiskMap() {
               name="Standard"
             >
               <TileLayer
-                attribution="&copy; OpenStreetMap contributors"
+                attribution='&copy; OpenStreetMap contributors'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
             </LayersControl.BaseLayer>
@@ -234,367 +344,389 @@ function RiskMap() {
 
             <LayersControl.BaseLayer name="Terrain">
               <TileLayer
-                attribution="OpenTopoMap"
+                attribution="&copy; OpenTopoMap contributors"
                 url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
               />
             </LayersControl.BaseLayer>
           </LayersControl>
 
-          {/* =================================================
-              ZONES
-          ================================================= */}
+          <ZoomControl position="bottomright" />
 
-          {zones.map((zone) => {
-            const isSelected =
-              selectedZone?.id === zone.id;
+          {/* RISK ZONES */}
 
-            return (
-              <div key={zone.id}>
-                <Circle
-                  center={zone.coordinates}
-                  radius={zone.radius}
-                  pathOptions={{
-                    color: zone.color,
-                    fillColor: zone.color,
-                    fillOpacity: isSelected
-                      ? 0.30
-                      : 0.15,
-                    weight: isSelected ? 4 : 2,
-                  }}
-                  eventHandlers={{
-                    click: () => {
-                      handleZoneSelect(zone);
-                    },
-                  }}
-                />
-
-                <Marker
-                  position={zone.coordinates}
-                  icon={getMarkerIcon(zone.level)}
-                  eventHandlers={{
-                    click: () => {
-                      handleZoneSelect(zone);
-                    },
-                  }}
-                >
-                  <Popup>
-                    <div
-                      style={{
-                        minWidth: "210px",
-                        fontFamily:
-                          "Arial, sans-serif",
-                      }}
-                    >
-                      <h3
-                        style={{
-                          margin: "0 0 10px",
-                          fontSize: "18px",
-                        }}
-                      >
-                        {zone.name}
-                      </h3>
-
-                      <p style={{ margin: "5px 0" }}>
-                        <strong>Zone ID:</strong>{" "}
-                        {zone.id}
-                      </p>
-
-                      <p style={{ margin: "5px 0" }}>
-                        <strong>Risk Level:</strong>{" "}
-                        {zone.level}
-                      </p>
-
-                      <p style={{ margin: "5px 0" }}>
-                        <strong>AI Risk Score:</strong>{" "}
-                        {zone.score}/100
-                      </p>
-
-                      <p style={{ margin: "5px 0" }}>
-                        <strong>Rainfall:</strong>{" "}
-                        {zone.rainfall}
-                      </p>
-
-                      <p style={{ margin: "5px 0" }}>
-                        <strong>Soil Moisture:</strong>{" "}
-                        {zone.soilMoisture}
-                      </p>
-
-                      <p style={{ margin: "5px 0" }}>
-                        <strong>Status:</strong>{" "}
-                        {zone.status}
-                      </p>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleZoneSelect(zone)
-                        }
-                        style={{
-                          width: "100%",
-                          marginTop: "10px",
-                          padding: "9px",
-                          border: "none",
-                          borderRadius: "7px",
-                          background: "#0A3323",
-                          color: "#F7F4D5",
-                          cursor: "pointer",
-                          fontWeight: "700",
-                        }}
-                      >
-                        Analyze This Zone
-                      </button>
-                    </div>
-                  </Popup>
-                </Marker>
-              </div>
-            );
-          })}
-        </MapContainer>
-
-        {/* =================================================
-            ZONE INTELLIGENCE PANEL
-        ================================================= */}
-
-        {selectedZone ? (
-          <div
-            style={{
-              position: "absolute",
-              left: "20px",
-              bottom: "20px",
-              zIndex: 1000,
-              width: "310px",
-              padding: "20px",
-              borderRadius: "18px",
-              background:
-                "rgba(10,51,35,0.95)",
-              border:
-                `1px solid ${selectedZone.color}`,
-              boxShadow:
-                "0 12px 35px rgba(0,0,0,0.40)",
-              backdropFilter: "blur(8px)",
-            }}
-          >
-            {/* Panel heading */}
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent:
-                  "space-between",
-                alignItems: "center",
-                marginBottom: "12px",
-              }}
-            >
-              <span
-                style={{
-                  color: "#839958",
-                  fontSize: "10px",
-                  fontWeight: "900",
-                  letterSpacing: "1.5px",
-                }}
-              >
-                ZONE INTELLIGENCE
-              </span>
-
-              <span
-                style={{
-                  width: "9px",
-                  height: "9px",
-                  borderRadius: "50%",
-                  background:
-                    selectedZone.color,
-                  boxShadow:
-                    `0 0 10px ${selectedZone.color}`,
+          {zones.map((zone) => (
+            <div key={zone.id}>
+              <Circle
+                center={zone.position}
+                radius={zone.radius}
+                pathOptions={{
+                  color: zone.color,
+                  fillColor: zone.color,
+                  fillOpacity: 0.18,
+                  weight: 2,
                 }}
               />
-            </div>
 
-            {/* Zone */}
-
-            <div
-              style={{
-                color: "#F7F4D5",
-                fontSize: "20px",
-                fontWeight: "800",
-              }}
-            >
-              {selectedZone.name}
-            </div>
-
-            {/* Zone ID */}
-
-            <div
-              style={{
-                color: "#B8C3A0",
-                fontSize: "11px",
-                marginTop: "3px",
-                letterSpacing: "0.5px",
-              }}
-            >
-              {selectedZone.id}
-            </div>
-
-            {/* Risk */}
-
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "7px",
-                marginTop: "15px",
-                padding:
-                  "6px 10px",
-                borderRadius: "20px",
-                background:
-                  "rgba(255,255,255,0.08)",
-              }}
-            >
-              <span
-                style={{
-                  color:
-                    selectedZone.color,
-                  fontSize: "12px",
-                  fontWeight: "900",
+              <Marker
+                position={zone.position}
+                icon={getIcon(zone.level)}
+                eventHandlers={{
+                  click: () => {
+                    if (onZoneSelect) {
+                      onZoneSelect(zone.id);
+                    }
+                  },
                 }}
               >
-                {selectedZone.level} RISK
-              </span>
+                <Popup>
+                  <div
+                    style={{
+                      minWidth: "220px",
+                      color: "#182018",
+                    }}
+                  >
+                    <h3
+                      style={{
+                        marginTop: 0,
+                        marginBottom: "8px",
+                      }}
+                    >
+                      {zone.name}
+                    </h3>
 
-              <span
-                style={{
-                  color: "#F7F4D5",
-                  fontSize: "12px",
-                  fontWeight: "800",
-                }}
-              >
-                {selectedZone.score}/100
-              </span>
+                    <p>
+                      <strong>Risk:</strong>{" "}
+                      {zone.level}
+                    </p>
+
+                    <p>
+                      <strong>Risk Score:</strong>{" "}
+                      {zone.score}
+                    </p>
+
+                    <p>
+                      <strong>Rainfall:</strong>{" "}
+                      {zone.rainfall} mm
+                    </p>
+
+                    <p>
+                      <strong>Soil Moisture:</strong>{" "}
+                      {zone.soilMoisture}%
+                    </p>
+
+                    <p>
+                      <strong>Status:</strong>{" "}
+                      {zone.status}
+                    </p>
+                  </div>
+                </Popup>
+              </Marker>
             </div>
+          ))}
+        </MapContainer>
 
-            {/* Action */}
+        {/* LOADING MESSAGE */}
 
-            <div
-              style={{
-                marginTop: "15px",
-                color: "#F7F4D5",
-                fontSize: "13px",
-                fontWeight: "800",
-              }}
-            >
-              {selectedZone.action}
-            </div>
-
-            {/* Message */}
-
-            <p
-              style={{
-                color: "#B8C3A0",
-                fontSize: "11px",
-                lineHeight: "1.6",
-                margin:
-                  "7px 0 14px",
-              }}
-            >
-              {selectedZone.message}
-            </p>
-
-            {/* AI button */}
-
-            <button
-              type="button"
-              onClick={goToPrediction}
-              style={{
-                width: "100%",
-                padding: "9px 12px",
-                border: "none",
-                borderRadius: "8px",
-                background:
-                  selectedZone.color,
-                color: "#FFFFFF",
-                cursor: "pointer",
-                fontSize: "11px",
-                fontWeight: "900",
-                transition:
-                  "transform 0.2s ease",
-              }}
-            >
-              VIEW AI PREDICTION →
-            </button>
-          </div>
-        ) : (
-          /* =================================================
-             NO ZONE SELECTED
-          ================================================= */
-
+        {loading && (
           <div
             style={{
               position: "absolute",
+              top: "20px",
               left: "20px",
-              bottom: "20px",
               zIndex: 1000,
-              padding:
-                "13px 16px",
-              borderRadius: "12px",
-              background:
-                "rgba(10,51,35,0.92)",
-              border:
-                "1px solid rgba(131,153,88,0.3)",
-              color: "#B8C3A0",
-              fontSize: "11px",
+              padding: "12px 16px",
+              borderRadius: "10px",
+              background: "rgba(16,23,18,0.92)",
+              color: "#DCE6D2",
+              fontSize: "13px",
+              fontWeight: "700",
             }}
           >
-            Click a zone to view its intelligence
+            Loading risk zones...
+          </div>
+        )}
+
+        {/* ERROR MESSAGE */}
+
+        {!loading && error && (
+          <div
+            style={{
+              position: "absolute",
+              top: "20px",
+              left: "20px",
+              right: "20px",
+              zIndex: 1000,
+              padding: "14px 18px",
+              borderRadius: "10px",
+              background: "rgba(70,30,30,0.95)",
+              color: "#FFD7D7",
+              fontSize: "13px",
+              fontWeight: "700",
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        {/* EMPTY STATE */}
+
+        {!loading && !error && zones.length === 0 && (
+          <div
+            style={{
+              position: "absolute",
+              top: "20px",
+              left: "20px",
+              right: "20px",
+              zIndex: 1000,
+              padding: "14px 18px",
+              borderRadius: "10px",
+              background: "rgba(16,23,18,0.92)",
+              color: "#DCE6D2",
+              fontSize: "13px",
+              fontWeight: "700",
+            }}
+          >
+            No risk zones are available in the database.
           </div>
         )}
       </div>
 
-      {/* =================================================
-          LEGEND
-      ================================================= */}
+      {/* INTELLIGENCE PANEL */}
+
+      <div
+        style={{
+          marginTop: "20px",
+          padding: "20px",
+          borderRadius: "16px",
+          background: "#172019",
+          border: "1px solid #304033",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "15px",
+            flexWrap: "wrap",
+          }}
+        >
+          <div>
+            <div
+              style={{
+                color: "#B8C3A0",
+                fontSize: "11px",
+                fontWeight: "800",
+                letterSpacing: "1px",
+                marginBottom: "7px",
+              }}
+            >
+              AI RISK INTELLIGENCE
+            </div>
+
+            <div
+              style={{
+                fontSize: "20px",
+                fontWeight: "800",
+              }}
+            >
+              {selectedZoneData
+                ? selectedZoneData.name
+                : "Select a risk zone"}
+            </div>
+          </div>
+
+          {selectedZoneData && (
+            <div
+              style={{
+                padding: "8px 14px",
+                borderRadius: "20px",
+                background: selectedZoneData.color,
+                color: "white",
+                fontSize: "12px",
+                fontWeight: "900",
+              }}
+            >
+              {selectedZoneData.level}
+            </div>
+          )}
+        </div>
+
+        {selectedZoneData ? (
+          <div style={{ marginTop: "18px" }}>
+            <p
+              style={{
+                color: "#C6D0C0",
+                lineHeight: "1.6",
+                marginTop: 0,
+              }}
+            >
+              {selectedZoneData.message}
+            </p>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(150px, 1fr))",
+                gap: "12px",
+                marginTop: "16px",
+              }}
+            >
+              <div
+                style={{
+                  padding: "14px",
+                  background: "#101712",
+                  borderRadius: "10px",
+                }}
+              >
+                <div
+                  style={{
+                    color: "#8F9B8B",
+                    fontSize: "11px",
+                  }}
+                >
+                  RISK SCORE
+                </div>
+
+                <div
+                  style={{
+                    fontSize: "22px",
+                    fontWeight: "800",
+                    marginTop: "5px",
+                  }}
+                >
+                  {selectedZoneData.score}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  padding: "14px",
+                  background: "#101712",
+                  borderRadius: "10px",
+                }}
+              >
+                <div
+                  style={{
+                    color: "#8F9B8B",
+                    fontSize: "11px",
+                  }}
+                >
+                  RAINFALL
+                </div>
+
+                <div
+                  style={{
+                    fontSize: "22px",
+                    fontWeight: "800",
+                    marginTop: "5px",
+                  }}
+                >
+                  {selectedZoneData.rainfall} mm
+                </div>
+              </div>
+
+              <div
+                style={{
+                  padding: "14px",
+                  background: "#101712",
+                  borderRadius: "10px",
+                }}
+              >
+                <div
+                  style={{
+                    color: "#8F9B8B",
+                    fontSize: "11px",
+                  }}
+                >
+                  SOIL MOISTURE
+                </div>
+
+                <div
+                  style={{
+                    fontSize: "22px",
+                    fontWeight: "800",
+                    marginTop: "5px",
+                  }}
+                >
+                  {selectedZoneData.soilMoisture}%
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                marginTop: "16px",
+                padding: "12px 14px",
+                borderLeft: `4px solid ${selectedZoneData.color}`,
+                background: "#101712",
+                color: "#D5DED0",
+                fontSize: "13px",
+                fontWeight: "700",
+              }}
+            >
+              Recommended action:{" "}
+              {selectedZoneData.action}
+            </div>
+          </div>
+        ) : (
+          <p
+            style={{
+              color: "#8F9B8B",
+              marginBottom: 0,
+              lineHeight: "1.6",
+            }}
+          >
+            Click a zone on the map to view its AI risk
+            assessment and recommended action.
+          </p>
+        )}
+      </div>
+
+      {/* LEGEND */}
 
       <div
         style={{
           display: "flex",
           gap: "20px",
           flexWrap: "wrap",
-          marginTop: "15px",
+          marginTop: "18px",
+          padding: "14px 4px",
         }}
       >
-        {[
-          ["CRITICAL", RISK_COLORS.CRITICAL],
-          ["HIGH", RISK_COLORS.HIGH],
-          ["LOW", RISK_COLORS.LOW],
-        ].map(([label, color]) => (
-          <div
-            key={label}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "7px",
-            }}
-          >
-            <span
+        {Object.entries(RISK_COLORS).map(
+          ([label, color]) => (
+            <div
+              key={label}
               style={{
-                width: "10px",
-                height: "10px",
-                borderRadius: "50%",
-                background: color,
-                boxShadow:
-                  `0 0 7px ${color}`,
-              }}
-            />
-
-            <span
-              style={{
-                color: "#B8C3A0",
-                fontSize: "10px",
-                fontWeight: "800",
+                display: "flex",
+                alignItems: "center",
+                gap: "7px",
               }}
             >
-              {label}
-            </span>
-          </div>
-        ))}
+              <span
+                style={{
+                  width: "10px",
+                  height: "10px",
+                  borderRadius: "50%",
+                  background: color,
+                  boxShadow: `0 0 7px ${color}`,
+                }}
+              />
+
+              <span
+                style={{
+                  color: "#B8C3A0",
+                  fontSize: "10px",
+                  fontWeight: "800",
+                }}
+              >
+                {label}
+              </span>
+            </div>
+          )
+        )}
       </div>
     </section>
   );

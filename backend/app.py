@@ -48,7 +48,7 @@ MODEL_PATH = os.path.abspath(
         "..",
         "ai-ml",
         "model",
-        "landslide_model_augmented.joblib"
+        "landslide_model.joblib"
     )
 )
 
@@ -406,12 +406,13 @@ def ai_risk_category(score):
 AI_MODEL_FEATURES = [
     "elevation_m",
     "slope_deg",
-    "aspect_deg",
     "rainfall_mm",
     "soil_clay_percent",
     "soil_sand_percent",
     "land_cover",
     "distance_to_road_m",
+    "aspect_sin",
+    "aspect_cos",
     "built_up_percent",
     "forest_loss_percent",
     "distance_to_stream_m",
@@ -427,7 +428,7 @@ def prediction_info():
         "data": {
             "status": "CONNECTED" if ai_model is not None else "NOT_CONNECTED",
             "model": "Random Forest",
-            "model_file": "landslide_model_augmented.joblib",
+            "model_file": "landslide_model.joblib",
             "message": (
                 "AI landslide risk model is connected and ready."
                 if ai_model is not None
@@ -508,15 +509,18 @@ def predict():
 
         zone_id = str(data["zone_id"])
 
+        aspect_rad = np.radians(float(data["aspect_deg"]))
+
         row = pd.DataFrame([{
             "elevation_m": float(data["elevation_m"]),
             "slope_deg": float(data["slope_deg"]),
-            "aspect_deg": float(data["aspect_deg"]),
             "rainfall_mm": float(data["rainfall_mm"]),
             "soil_clay_percent": float(data["soil_clay_percent"]),
             "soil_sand_percent": float(data["soil_sand_percent"]),
-            "land_cover": int(data["land_cover"]),
+            "land_cover": data["land_cover"],
             "distance_to_road_m": float(data["distance_to_road_m"]),
+            "aspect_sin": np.sin(aspect_rad),
+            "aspect_cos": np.cos(aspect_rad),
             "built_up_percent": float(data["built_up_percent"]),
             "forest_loss_percent": float(data["forest_loss_percent"]),
             "distance_to_stream_m": float(data["distance_to_stream_m"]),
@@ -1573,8 +1577,8 @@ def dashboard():
                     WHERE UPPER(risk_level) = 'CRITICAL'
                 ),
                 COUNT(*) FILTER (
-                    WHERE UPPER(risk_level) = 'VERY HIGH'
-                ),
+    WHERE risk_score >= 75
+),
                 MAX(risk_score)
             FROM risk_zones
             """

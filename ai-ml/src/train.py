@@ -25,8 +25,7 @@ from sklearn.metrics import (
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 
-DATA_FILE = BASE_DIR / "data" / "processed" / "zone_training_data_augmented.csv"
-
+DATA_FILE = BASE_DIR / "data" / "zone_training_data_augmented.csv"
 # Works for both:
 # LANDGUARD_M1/models/
 # and

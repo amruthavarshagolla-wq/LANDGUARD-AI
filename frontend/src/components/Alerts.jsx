@@ -1,116 +1,378 @@
-import { useState, useEffect } from "react";
-import { getAlerts } from "../lib/api";
+import { useEffect, useState } from "react";
 
-function Alerts({ selectedZone }) {
-  const [filter, setFilter] = useState("ALL");
+const API_BASE = "http://localhost:5000";
+
+function Alerts() {
   const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [filter, setFilter] = useState("ALL");
 
-  useEffect(() => {
-    getAlerts()
-      .then((res) => {
-        if (res && res.data) {
-          setAlerts(res.data);
-        }
-      })
-      .catch((err) => console.warn("Could not fetch live alerts:", err));
-  }, []);
+  const fetchAlerts = async () => {
+    try {
+      setLoading(true);
+      setError("");
 
+      const response = await fetch(
+        `${API_BASE}/api/alerts`
+      );
 
-  // -----------------------------------------
-  // DYNAMIC SEVERITY CONFIGURATION
-  // -----------------------------------------
+      const data = await response.json();
 
-  const getSeverityConfig = (severity) => {
-    switch (severity) {
-      case "CRITICAL":
-        return {
-          color: "#D3968C",
-          background:
-            "linear-gradient(145deg, rgba(90,38,38,0.95), rgba(53,29,34,0.98))",
-          border: "rgba(211,150,140,0.55)",
-          glow: "rgba(211,150,140,0.18)",
-          icon: "🚨",
-        };
+      console.log(
+        "LANDGUARD alerts response:",
+        data
+      );
 
-      case "HIGH":
-        return {
-          color: "#D9A441",
-          background:
-            "linear-gradient(145deg, rgba(82,65,27,0.95), rgba(48,43,23,0.98))",
-          border: "rgba(217,164,65,0.5)",
-          glow: "rgba(217,164,65,0.14)",
-          icon: "⚠️",
-        };
+      if (!response.ok) {
+        throw new Error(
+          data.error ||
+            data.message ||
+            "Unable to load alerts."
+        );
+      }
 
-      case "MEDIUM":
-        return {
-          color: "#C7B65A",
-          background:
-            "linear-gradient(145deg, rgba(67,69,32,0.95), rgba(38,50,29,0.98))",
-          border: "rgba(199,182,90,0.45)",
-          glow: "rgba(199,182,90,0.12)",
-          icon: "🟡",
-        };
+      /*
+       * Support the possible backend response
+       * structures safely.
+       */
+      let result = [];
 
-      default:
-        return {
-          color: "#839958",
-          background:
-            "linear-gradient(145deg, rgba(39,68,48,0.95), rgba(19,52,40,0.98))",
-          border: "rgba(131,153,88,0.4)",
-          glow: "rgba(131,153,88,0.1)",
-          icon: "✓",
-        };
+      if (Array.isArray(data)) {
+        result = data;
+      } else if (Array.isArray(data.data)) {
+        result = data.data;
+      } else if (
+        data.data &&
+        Array.isArray(data.data.alerts)
+      ) {
+        result = data.data.alerts;
+      } else if (Array.isArray(data.alerts)) {
+        result = data.alerts;
+      }
+
+      setAlerts(result);
+    } catch (err) {
+      console.error(
+        "LANDGUARD alerts error:",
+        err
+      );
+
+      setError(
+        err.message ||
+          "Unable to connect to alerts service."
+      );
+
+      setAlerts([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // -----------------------------------------
-  // SELECT ALERTS FOR CURRENT ZONE
-  // -----------------------------------------
+  useEffect(() => {
+    fetchAlerts();
 
-  const zoneAlerts = selectedZone
-    ? alerts.filter((alert) => alert.zoneId === selectedZone.id)
-    : alerts;
+    /*
+     * Refresh alerts every 30 seconds.
+     */
+    const interval = setInterval(
+      fetchAlerts,
+      30000
+    );
 
-  // -----------------------------------------
-  // FILTER BY ZONE + SEVERITY
-  // -----------------------------------------
+    return () => {
+      clearInterval(interval);
+    };
+  }, []);
+
+  const normalizeSeverity = (alert) => {
+    const value =
+      alert.severity ||
+      alert.priority ||
+      alert.alert_level ||
+      alert.risk_level ||
+      "";
+
+    const normalized =
+      String(value).toUpperCase();
+
+    if (
+      normalized.includes("CRITICAL")
+    ) {
+      return "CRITICAL";
+    }
+
+    if (
+      normalized.includes("VERY HIGH")
+    ) {
+      return "VERY HIGH";
+    }
+
+    if (
+      normalized.includes("HIGH")
+    ) {
+      return "HIGH";
+    }
+
+    if (
+      normalized.includes("MEDIUM") ||
+      normalized.includes("MODERATE")
+    ) {
+      return "MEDIUM";
+    }
+
+    return "LOW";
+  };
+
+  const getAlertTitle = (alert) => {
+    return (
+      alert.title ||
+      alert.alert_title ||
+      alert.alert_type ||
+      alert.type ||
+      "LANDSLIDE ALERT"
+    );
+  };
+
+  const getAlertMessage = (alert) => {
+    return (
+      alert.message ||
+      alert.alert_message ||
+      alert.description ||
+      alert.warning_message ||
+      alert.explanation ||
+      "Landslide monitoring alert generated by LANDGUARD."
+    );
+  };
+
+  const getZoneName = (alert) => {
+    if (alert.zone_name) {
+      return alert.zone_name;
+    }
+
+    if (alert.zone) {
+      if (
+        typeof alert.zone === "object"
+      ) {
+        return (
+          alert.zone.name ||
+          alert.zone.zone_name ||
+          `Zone ${alert.zone.id || ""}`
+        );
+      }
+
+      return String(alert.zone);
+    }
+
+    if (alert.risk_zone) {
+      if (
+        typeof alert.risk_zone ===
+        "object"
+      ) {
+        return (
+          alert.risk_zone.name ||
+          alert.risk_zone.zone_name ||
+          "Risk Zone"
+        );
+      }
+
+      return String(alert.risk_zone);
+    }
+
+    return "Monitored Area";
+  };
+
+  const getRiskScore = (alert) => {
+    const score = Number(
+      alert.risk_score ??
+        alert.score ??
+        alert.riskScore
+    );
+
+    return Number.isFinite(score)
+      ? score
+      : null;
+  };
+
+  const getStatus = (alert) => {
+    return String(
+      alert.status || "ACTIVE"
+    ).toUpperCase();
+  };
+
+  const getCreatedAt = (alert) => {
+    return (
+      alert.created_at ||
+      alert.timestamp ||
+      alert.alert_time ||
+      alert.updated_at ||
+      null
+    );
+  };
+
+  const getLocation = (alert) => {
+    const latitude =
+      alert.latitude ??
+      alert.lat ??
+      alert.location?.latitude;
+
+    const longitude =
+      alert.longitude ??
+      alert.lng ??
+      alert.location?.longitude;
+
+    if (
+      latitude === null ||
+      latitude === undefined ||
+      longitude === null ||
+      longitude === undefined
+    ) {
+      return null;
+    }
+
+    return `${Number(latitude).toFixed(
+      4
+    )}, ${Number(longitude).toFixed(
+      4
+    )}`;
+  };
+
+  const getRecommendedAction = (
+    alert,
+    severity
+  ) => {
+    if (alert.recommended_action) {
+      return alert.recommended_action;
+    }
+
+    if (alert.action) {
+      return alert.action;
+    }
+
+    if (
+      severity === "CRITICAL" ||
+      severity === "VERY HIGH"
+    ) {
+      return "Immediate inspection and emergency response preparation required.";
+    }
+
+    if (severity === "HIGH") {
+      return "Increase monitoring and prepare an inspection team.";
+    }
+
+    if (severity === "MEDIUM") {
+      return "Continue enhanced monitoring of the area.";
+    }
+
+    return "Continue routine monitoring.";
+  };
 
   const filteredAlerts =
     filter === "ALL"
-      ? zoneAlerts
-      : zoneAlerts.filter((alert) => alert.severity === filter);
+      ? alerts
+      : alerts.filter(
+          (alert) =>
+            normalizeSeverity(alert) ===
+            filter
+        );
 
-  // -----------------------------------------
-  // SUMMARY COUNTS
-  // -----------------------------------------
+  const activeCount =
+    alerts.filter(
+      (alert) =>
+        getStatus(alert) === "ACTIVE"
+    ).length;
 
-  const criticalCount = zoneAlerts.filter(
-    (alert) => alert.severity === "CRITICAL"
-  ).length;
+  const criticalCount =
+    alerts.filter((alert) => {
+      const severity =
+        normalizeSeverity(alert);
 
-  const highCount = zoneAlerts.filter(
-    (alert) => alert.severity === "HIGH"
-  ).length;
+      return (
+        severity === "CRITICAL" ||
+        severity === "VERY HIGH"
+      );
+    }).length;
 
-  const mediumCount = zoneAlerts.filter(
-    (alert) => alert.severity === "MEDIUM"
-  ).length;
+  const highCount =
+    alerts.filter(
+      (alert) =>
+        normalizeSeverity(alert) ===
+        "HIGH"
+    ).length;
 
-  const lowCount = zoneAlerts.filter(
-    (alert) => alert.severity === "LOW"
-  ).length;
+  const formatDate = (value) => {
+    if (!value) {
+      return "Time unavailable";
+    }
 
-  const activeAlerts = zoneAlerts.filter(
-    (alert) => alert.status === "ACTIVE"
-  );
+    const date = new Date(value);
 
-  const activeCount = activeAlerts.length;
+    if (Number.isNaN(date.getTime())) {
+      return String(value);
+    }
 
-  // Unique Zone IDs among active alerts
-  const activeZoneIds = [
-    ...new Set(activeAlerts.map((alert) => alert.zoneId)),
-  ];
+    return date.toLocaleString();
+  };
+
+  const getSeverityColor = (
+    severity
+  ) => {
+    if (
+      severity === "CRITICAL"
+    ) {
+      return "#B83A3A";
+    }
+
+    if (
+      severity === "VERY HIGH"
+    ) {
+      return "#C65A35";
+    }
+
+    if (
+      severity === "HIGH"
+    ) {
+      return "#E07A32";
+    }
+
+    if (
+      severity === "MEDIUM"
+    ) {
+      return "#D9A441";
+    }
+
+    return "#839958";
+  };
+
+  const getSeverityBackground = (
+    severity
+  ) => {
+    if (
+      severity === "CRITICAL"
+    ) {
+      return "rgba(184,58,58,0.12)";
+    }
+
+    if (
+      severity === "VERY HIGH"
+    ) {
+      return "rgba(198,90,53,0.12)";
+    }
+
+    if (
+      severity === "HIGH"
+    ) {
+      return "rgba(224,122,50,0.12)";
+    }
+
+    if (
+      severity === "MEDIUM"
+    ) {
+      return "rgba(217,164,65,0.10)";
+    }
+
+    return "rgba(131,153,88,0.10)";
+  };
 
   return (
     <section
@@ -122,671 +384,695 @@ function Alerts({ selectedZone }) {
         scrollMarginTop: "95px",
       }}
     >
-      {/* =====================================
-          SECTION HEADER
-      ===================================== */}
-
+      {/* HEADER */}
       <div
         style={{
-          marginBottom: "24px",
+          marginBottom: "25px",
         }}
       >
         <p
           style={{
-            color: "#D3968C",
+            color: "#839958",
             fontSize: "13px",
-            fontWeight: "800",
+            fontWeight: "900",
             letterSpacing: "2px",
-            marginBottom: "7px",
+            margin: "0 0 7px",
           }}
         >
-          AUTHORITY CONTROL CENTER
+          EARLY RESPONSE SYSTEM
         </p>
 
-        <div
+        <h2
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-end",
-            gap: "20px",
-            flexWrap: "wrap",
+            color: "#F7F4D5",
+            fontSize: "30px",
+            margin: 0,
+            fontWeight: "800",
           }}
         >
-          <div>
-            <h2
-              style={{
-                color: "#F7F4D5",
-                fontSize: "30px",
-                margin: 0,
-                fontWeight: "800",
-              }}
-            >
-              🔔 Active Alerts
-            </h2>
+          Alerts & Notifications
+        </h2>
 
-            <p
-              style={{
-                color: "#B8C3A0",
-                marginTop: "7px",
-                fontSize: "15px",
-              }}
-            >
-              Monitor, prioritize and respond to landslide-related alerts.
-            </p>
-
-            {/* SELECTED ZONE */}
-
-            {selectedZone && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "9px",
-                  marginTop: "12px",
-                  flexWrap: "wrap",
-                }}
-              >
-                <span
-                  style={{
-                    color: "#839958",
-                    fontSize: "11px",
-                    fontWeight: "900",
-                    letterSpacing: "1px",
-                  }}
-                >
-                  ALERTS FOR:
-                </span>
-
-                <span
-                  style={{
-                    color: "#F7F4D5",
-                    fontSize: "13px",
-                    fontWeight: "800",
-                  }}
-                >
-                  {selectedZone.name}
-                </span>
-
-                <span
-                  style={{
-                    color: "#839958",
-                    background: "rgba(131,153,88,0.12)",
-                    border: "1px solid rgba(131,153,88,0.3)",
-                    padding: "4px 8px",
-                    borderRadius: "7px",
-                    fontSize: "10px",
-                    fontWeight: "800",
-                    letterSpacing: "0.5px",
-                  }}
-                >
-                  {selectedZone.id}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* LIVE STATUS */}
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "9px",
-              background: "rgba(131,153,88,0.1)",
-              border: "1px solid rgba(131,153,88,0.3)",
-              padding: "9px 14px",
-              borderRadius: "999px",
-            }}
-          >
-            <span
-              style={{
-                width: "9px",
-                height: "9px",
-                borderRadius: "50%",
-                background: "#839958",
-                boxShadow: "0 0 12px rgba(131,153,88,0.8)",
-              }}
-            />
-
-            <span
-              style={{
-                color: "#839958",
-                fontWeight: "800",
-                fontSize: "12px",
-                letterSpacing: "1px",
-              }}
-            >
-              LIVE MONITORING
-            </span>
-          </div>
-        </div>
+        <p
+          style={{
+            color: "#B8C3A0",
+            marginTop: "7px",
+            fontSize: "15px",
+          }}
+        >
+          Real-time landslide alerts generated
+          from the LANDGUARD monitoring system.
+        </p>
       </div>
 
-      {/* =====================================
-          SUMMARY CARDS
-      ===================================== */}
-
+      {/* SUMMARY CARDS */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(5, 1fr)",
-          gap: "14px",
-          marginBottom: "24px",
+          gridTemplateColumns:
+            "repeat(3, minmax(0, 1fr))",
+          gap: "15px",
+          marginBottom: "20px",
         }}
       >
-        {/* ACTIVE */}
+        <SummaryCard
+          title="ACTIVE ALERTS"
+          value={activeCount}
+          description="Currently active"
+        />
 
-        <div
-          style={{
-            background:
-              "linear-gradient(145deg, #105666, #0A3323)",
-            border: "1px solid rgba(247,244,213,0.1)",
-            borderRadius: "16px",
-            padding: "18px",
-          }}
-        >
-          <span
-            style={{
-              color: "#839958",
-              fontSize: "11px",
-              fontWeight: "800",
-              letterSpacing: "1px",
-            }}
-          >
-            ACTIVE
-          </span>
+        <SummaryCard
+          title="CRITICAL"
+          value={criticalCount}
+          description="Immediate attention"
+        />
 
-          <div
-            style={{
-              color: "#F7F4D5",
-              fontSize: "30px",
-              fontWeight: "900",
-              marginTop: "6px",
-            }}
-          >
-            {activeCount}
-
-            {/* ACTIVE ZONE IDS */}
-
-            {activeZoneIds.length > 0 && (
-              <div
-                style={{
-                  marginTop: "8px",
-                  color: "#B8C3A0",
-                  fontSize: "9px",
-                  lineHeight: "1.6",
-                  fontWeight: "700",
-                  wordBreak: "break-word",
-                }}
-              >
-                {activeZoneIds.join(" • ")}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* CRITICAL */}
-
-        <div
-          style={{
-            background:
-              "linear-gradient(145deg, rgba(90,38,38,0.95), rgba(53,29,34,0.98))",
-            border: "1px solid rgba(211,150,140,0.35)",
-            borderRadius: "16px",
-            padding: "18px",
-          }}
-        >
-          <span
-            style={{
-              color: "#D3968C",
-              fontSize: "11px",
-              fontWeight: "800",
-              letterSpacing: "1px",
-            }}
-          >
-            CRITICAL
-          </span>
-
-          <div
-            style={{
-              color: "#F7F4D5",
-              fontSize: "30px",
-              fontWeight: "900",
-              marginTop: "6px",
-            }}
-          >
-            {criticalCount}
-          </div>
-        </div>
-
-        {/* HIGH */}
-
-        <div
-          style={{
-            background:
-              "linear-gradient(145deg, rgba(82,65,27,0.95), rgba(48,43,23,0.98))",
-            border: "1px solid rgba(217,164,65,0.3)",
-            borderRadius: "16px",
-            padding: "18px",
-          }}
-        >
-          <span
-            style={{
-              color: "#D9A441",
-              fontSize: "11px",
-              fontWeight: "800",
-              letterSpacing: "1px",
-            }}
-          >
-            HIGH
-          </span>
-
-          <div
-            style={{
-              color: "#F7F4D5",
-              fontSize: "30px",
-              fontWeight: "900",
-              marginTop: "6px",
-            }}
-          >
-            {highCount}
-          </div>
-        </div>
-
-        {/* MEDIUM */}
-
-        <div
-          style={{
-            background:
-              "linear-gradient(145deg, rgba(67,69,32,0.95), rgba(38,50,29,0.98))",
-            border: "1px solid rgba(199,182,90,0.25)",
-            borderRadius: "16px",
-            padding: "18px",
-          }}
-        >
-          <span
-            style={{
-              color: "#C7B65A",
-              fontSize: "11px",
-              fontWeight: "800",
-              letterSpacing: "1px",
-            }}
-          >
-            MEDIUM
-          </span>
-
-          <div
-            style={{
-              color: "#F7F4D5",
-              fontSize: "30px",
-              fontWeight: "900",
-              marginTop: "6px",
-            }}
-          >
-            {mediumCount}
-          </div>
-        </div>
-
-        {/* LOW */}
-
-        <div
-          style={{
-            background:
-              "linear-gradient(145deg, rgba(39,68,48,0.95), rgba(19,52,40,0.98))",
-            border: "1px solid rgba(131,153,88,0.25)",
-            borderRadius: "16px",
-            padding: "18px",
-          }}
-        >
-          <span
-            style={{
-              color: "#839958",
-              fontSize: "11px",
-              fontWeight: "800",
-              letterSpacing: "1px",
-            }}
-          >
-            LOW
-          </span>
-
-          <div
-            style={{
-              color: "#F7F4D5",
-              fontSize: "30px",
-              fontWeight: "900",
-              marginTop: "6px",
-            }}
-          >
-            {lowCount}
-          </div>
-        </div>
+        <SummaryCard
+          title="HIGH"
+          value={highCount}
+          description="Enhanced monitoring"
+        />
       </div>
 
-      {/* =====================================
-          FILTER BAR
-      ===================================== */}
-
+      {/* MAIN PANEL */}
       <div
         style={{
-          display: "flex",
-          gap: "9px",
-          flexWrap: "wrap",
-          marginBottom: "18px",
+          background:
+            "linear-gradient(145deg, #105666, #0A3323)",
+          border:
+            "1px solid rgba(131,153,88,0.25)",
+          borderRadius: "22px",
+          padding: "25px",
         }}
       >
-        {["ALL", "CRITICAL", "HIGH", "MEDIUM", "LOW"].map(
-          (level) => {
-            const isSelected = filter === level;
-
-            return (
-              <button
-                key={level}
-                onClick={() => setFilter(level)}
-                style={{
-                  border: isSelected
-                    ? "1px solid #839958"
-                    : "1px solid rgba(247,244,213,0.13)",
-                  background: isSelected
-                    ? "rgba(131,153,88,0.16)"
-                    : "rgba(16,86,102,0.45)",
-                  color: isSelected
-                    ? "#F7F4D5"
-                    : "#AEB99B",
-                  borderRadius: "10px",
-                  padding: "9px 15px",
-                  fontSize: "12px",
-                  fontWeight: "800",
-                  cursor: "pointer",
-                  letterSpacing: "0.5px",
-                }}
-              >
-                {level}
-              </button>
-            );
-          }
-        )}
-      </div>
-
-      {/* =====================================
-          ALERT LIST
-      ===================================== */}
-
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "13px",
-        }}
-      >
-        {filteredAlerts.map((alert) => {
-          const config = getSeverityConfig(alert.severity);
-
-          return (
-            <div
-              key={alert.id}
+        {/* TOP BAR */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent:
+              "space-between",
+            alignItems: "center",
+            gap: "15px",
+            flexWrap: "wrap",
+            marginBottom: "20px",
+          }}
+        >
+          <div>
+            <h3
               style={{
-                background: config.background,
-                border: `1px solid ${config.border}`,
-                borderRadius: "17px",
-                padding: "20px",
-                boxShadow: `0 10px 28px ${config.glow}`,
-                transition:
-                  "transform 0.2s ease, box-shadow 0.2s ease",
+                color: "#F7F4D5",
+                fontSize: "19px",
+                margin: 0,
+              }}
+            >
+              Current Alerts
+            </h3>
+
+            <p
+              style={{
+                color: "#7F8C72",
+                fontSize: "11px",
+                margin:
+                  "5px 0 0",
+              }}
+            >
+              Automatically refreshed every
+              30 seconds.
+            </p>
+          </div>
+
+          {/* FILTERS */}
+          <div
+            style={{
+              display: "flex",
+              gap: "7px",
+              flexWrap: "wrap",
+            }}
+          >
+            {[
+              "ALL",
+              "CRITICAL",
+              "VERY HIGH",
+              "HIGH",
+              "MEDIUM",
+              "LOW",
+            ].map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() =>
+                  setFilter(item)
+                }
+                style={{
+                  padding:
+                    "8px 11px",
+                  borderRadius: "8px",
+                  border:
+                    "1px solid rgba(131,153,88,0.25)",
+                  background:
+                    filter === item
+                      ? "rgba(131,153,88,0.20)"
+                      : "transparent",
+                  color:
+                    filter === item
+                      ? "#F7F4D5"
+                      : "#7F8C72",
+                  cursor: "pointer",
+                  fontSize: "9px",
+                  fontWeight: "900",
+                }}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* LOADING */}
+        {loading && (
+          <div
+            style={{
+              padding: "40px",
+              textAlign: "center",
+              color: "#B8C3A0",
+              background:
+                "rgba(0,0,0,0.12)",
+              borderRadius: "15px",
+            }}
+          >
+            Loading live alerts from
+            LANDGUARD backend...
+          </div>
+        )}
+
+        {/* ERROR */}
+        {!loading && error && (
+          <div
+            style={{
+              padding: "18px",
+              borderRadius: "12px",
+              background:
+                "rgba(184,58,58,0.14)",
+              border:
+                "1px solid rgba(184,58,58,0.4)",
+              color: "#F0B4B4",
+              fontSize: "12px",
+            }}
+          >
+            <strong>
+              Alert service unavailable:
+            </strong>{" "}
+            {error}
+          </div>
+        )}
+
+        {/* EMPTY */}
+        {!loading &&
+          !error &&
+          filteredAlerts.length === 0 && (
+            <div
+              style={{
+                padding: "45px 20px",
+                textAlign: "center",
+                background:
+                  "rgba(0,0,0,0.12)",
+                borderRadius: "15px",
               }}
             >
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "55px 1fr auto",
-                  gap: "16px",
-                  alignItems: "center",
+                  fontSize: "30px",
+                  marginBottom: "10px",
                 }}
               >
-                {/* ICON */}
-
-                <div
-                  style={{
-                    width: "52px",
-                    height: "52px",
-                    borderRadius: "15px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    background: `${config.color}18`,
-                    border: `1px solid ${config.border}`,
-                    fontSize: "22px",
-                  }}
-                >
-                  {config.icon}
-                </div>
-
-                {/* ALERT INFORMATION */}
-
-                <div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "9px",
-                      flexWrap: "wrap",
-                      marginBottom: "6px",
-                    }}
-                  >
-                    <h3
-                      style={{
-                        color: "#F7F4D5",
-                        fontSize: "17px",
-                        margin: 0,
-                        fontWeight: "800",
-                      }}
-                    >
-                      {alert.title}
-                    </h3>
-
-                    <span
-                      style={{
-                        color: config.color,
-                        background: `${config.color}18`,
-                        border: `1px solid ${config.border}`,
-                        padding: "4px 8px",
-                        borderRadius: "999px",
-                        fontSize: "10px",
-                        fontWeight: "900",
-                      }}
-                    >
-                      {alert.severity}
-                    </span>
-                  </div>
-
-                  <p
-                    style={{
-                      color: "#B8C3A0",
-                      fontSize: "13px",
-                      lineHeight: "1.5",
-                      margin: "0 0 10px",
-                    }}
-                  >
-                    {alert.message}
-                  </p>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: "8px",
-                    }}
-                  >
-                    {/* ZONE NAME */}
-
-                    <span
-                      style={{
-                        color: "#839958",
-                        fontSize: "11px",
-                        background: "rgba(247,244,213,0.06)",
-                        padding: "5px 8px",
-                        borderRadius: "7px",
-                      }}
-                    >
-                      📍 {alert.zone}
-                    </span>
-
-                    {/* ZONE ID */}
-
-                    <span
-                      style={{
-                        color: "#839958",
-                        fontSize: "11px",
-                        background: "rgba(131,153,88,0.1)",
-                        border: "1px solid rgba(131,153,88,0.18)",
-                        padding: "5px 8px",
-                        borderRadius: "7px",
-                        fontWeight: "800",
-                      }}
-                    >
-                      ID: {alert.zoneId}
-                    </span>
-
-                    {/* TIME */}
-
-                    <span
-                      style={{
-                        color: "#839958",
-                        fontSize: "11px",
-                        background: "rgba(247,244,213,0.06)",
-                        padding: "5px 8px",
-                        borderRadius: "7px",
-                      }}
-                    >
-                      🕒 {alert.time}
-                    </span>
-
-                    {/* STATUS */}
-
-                    <span
-                      style={{
-                        color: config.color,
-                        fontSize: "11px",
-                        background: `${config.color}12`,
-                        padding: "5px 8px",
-                        borderRadius: "7px",
-                        fontWeight: "800",
-                      }}
-                    >
-                      {alert.status}
-                    </span>
-                  </div>
-                </div>
-
-                {/* RISK SCORE */}
-
-                <div
-                  style={{
-                    textAlign: "center",
-                    minWidth: "85px",
-                  }}
-                >
-                  <span
-                    style={{
-                      color: "#839958",
-                      fontSize: "10px",
-                      fontWeight: "800",
-                      display: "block",
-                      letterSpacing: "1px",
-                    }}
-                  >
-                    RISK
-                  </span>
-
-                  <strong
-                    style={{
-                      color: config.color,
-                      fontSize: "28px",
-                      fontWeight: "900",
-                    }}
-                  >
-                    {alert.score}
-                  </strong>
-
-                  <span
-                    style={{
-                      color: "#839958",
-                      fontSize: "10px",
-                    }}
-                  >
-                    /100
-                  </span>
-                </div>
+                ✓
               </div>
-
-              {/* RISK PROGRESS */}
 
               <div
                 style={{
-                  marginTop: "16px",
-                  height: "5px",
-                  background: "rgba(247,244,213,0.08)",
-                  borderRadius: "999px",
-                  overflow: "hidden",
+                  color: "#F7F4D5",
+                  fontSize: "15px",
+                  fontWeight: "800",
                 }}
               >
-                <div
-                  style={{
-                    width: `${alert.score}%`,
-                    height: "100%",
-                    background: config.color,
-                    borderRadius: "999px",
-                    boxShadow: `0 0 10px ${config.color}`,
-                    transition: "width 0.6s ease",
-                  }}
-                />
+                No alerts found
               </div>
+
+              <p
+                style={{
+                  color: "#7F8C72",
+                  fontSize: "11px",
+                }}
+              >
+                There are no alerts matching
+                the selected filter.
+              </p>
             </div>
-          );
-        })}
+          )}
+
+        {/* ALERT LIST */}
+        {!loading &&
+          !error &&
+          filteredAlerts.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                flexDirection:
+                  "column",
+                gap: "12px",
+              }}
+            >
+              {filteredAlerts.map(
+                (alert, index) => {
+                  const severity =
+                    normalizeSeverity(
+                      alert
+                    );
+
+                  const color =
+                    getSeverityColor(
+                      severity
+                    );
+
+                  const background =
+                    getSeverityBackground(
+                      severity
+                    );
+
+                  const score =
+                    getRiskScore(alert);
+
+                  const zone =
+                    getZoneName(alert);
+
+                  const status =
+                    getStatus(alert);
+
+                  const location =
+                    getLocation(alert);
+
+                  return (
+                    <div
+                      key={
+                        alert.id ??
+                        alert.alert_id ??
+                        index
+                      }
+                      style={{
+                        borderRadius:
+                          "15px",
+                        border:
+                          `1px solid ${color}55`,
+                        background:
+                          background,
+                        overflow:
+                          "hidden",
+                      }}
+                    >
+                      {/* ALERT HEADER */}
+                      <div
+                        style={{
+                          display:
+                            "flex",
+                          justifyContent:
+                            "space-between",
+                          alignItems:
+                            "center",
+                          gap: "15px",
+                          padding:
+                            "17px 18px",
+                          flexWrap:
+                            "wrap",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display:
+                              "flex",
+                            alignItems:
+                              "center",
+                            gap: "12px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width:
+                                "38px",
+                              height:
+                                "38px",
+                              borderRadius:
+                                "10px",
+                              display:
+                                "flex",
+                              alignItems:
+                                "center",
+                              justifyContent:
+                                "center",
+                              background:
+                                `${color}22`,
+                              border:
+                                `1px solid ${color}55`,
+                              color:
+                                color,
+                              fontSize:
+                                "18px",
+                            }}
+                          >
+                            !
+                          </div>
+
+                          <div>
+                            <div
+                              style={{
+                                color:
+                                  "#F7F4D5",
+                                fontSize:
+                                  "13px",
+                                fontWeight:
+                                  "900",
+                              }}
+                            >
+                              {getAlertTitle(
+                                alert
+                              )}
+                            </div>
+
+                            <div
+                              style={{
+                                color:
+                                  "#9FAC8E",
+                                fontSize:
+                                  "10px",
+                                marginTop:
+                                  "3px",
+                              }}
+                            >
+                              {zone}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            display:
+                              "flex",
+                            alignItems:
+                              "center",
+                            gap: "8px",
+                          }}
+                        >
+                          <span
+                            style={{
+                              padding:
+                                "5px 8px",
+                              borderRadius:
+                                "6px",
+                              background:
+                                `${color}22`,
+                              color:
+                                color,
+                              fontSize:
+                                "9px",
+                              fontWeight:
+                                "900",
+                            }}
+                          >
+                            {severity}
+                          </span>
+
+                          <span
+                            style={{
+                              padding:
+                                "5px 8px",
+                              borderRadius:
+                                "6px",
+                              background:
+                                status ===
+                                "ACTIVE"
+                                  ? "rgba(131,153,88,0.15)"
+                                  : "rgba(247,244,213,0.06)",
+                              color:
+                                status ===
+                                "ACTIVE"
+                                  ? "#839958"
+                                  : "#7F8C72",
+                              fontSize:
+                                "9px",
+                              fontWeight:
+                                "900",
+                            }}
+                          >
+                            {status}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* ALERT BODY */}
+                      <div
+                        style={{
+                          padding:
+                            "0 18px 18px 68px",
+                        }}
+                      >
+                        <p
+                          style={{
+                            color:
+                              "#B8C3A0",
+                            fontSize:
+                              "11px",
+                            lineHeight:
+                              "1.6",
+                            margin:
+                              "0 0 15px",
+                          }}
+                        >
+                          {getAlertMessage(
+                            alert
+                          )}
+                        </p>
+
+                        <div
+                          style={{
+                            display:
+                              "grid",
+                            gridTemplateColumns:
+                              "repeat(3, minmax(0, 1fr))",
+                            gap: "10px",
+                          }}
+                        >
+                          <InfoBox
+                            label="RISK SCORE"
+                            value={
+                              score !==
+                              null
+                                ? `${score}/100`
+                                : "N/A"
+                            }
+                          />
+
+                          <InfoBox
+                            label="LOCATION"
+                            value={
+                              location ||
+                              "Not available"
+                            }
+                          />
+
+                          <InfoBox
+                            label="TIME"
+                            value={formatDate(
+                              getCreatedAt(
+                                alert
+                              )
+                            )}
+                          />
+                        </div>
+
+                        <div
+                          style={{
+                            marginTop:
+                              "12px",
+                            padding:
+                              "12px",
+                            borderRadius:
+                              "9px",
+                            background:
+                              "rgba(0,0,0,0.12)",
+                            border:
+                              "1px solid rgba(247,244,213,0.06)",
+                          }}
+                        >
+                          <div
+                            style={{
+                              color:
+                                "#839958",
+                              fontSize:
+                                "9px",
+                              fontWeight:
+                                "900",
+                              letterSpacing:
+                                "1px",
+                            }}
+                          >
+                            RECOMMENDED ACTION
+                          </div>
+
+                          <div
+                            style={{
+                              color:
+                                "#B8C3A0",
+                              fontSize:
+                                "10px",
+                              lineHeight:
+                                "1.5",
+                              marginTop:
+                                "5px",
+                            }}
+                          >
+                            {getRecommendedAction(
+                              alert,
+                              severity
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+              )}
+            </div>
+          )}
       </div>
 
-      {/* =====================================
-          EMPTY STATE
-      ===================================== */}
-
-      {filteredAlerts.length === 0 && (
-        <div
+      {/* FOOTER */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent:
+            "space-between",
+          alignItems: "center",
+          marginTop: "15px",
+          flexWrap: "wrap",
+          gap: "10px",
+        }}
+      >
+        <span
           style={{
-            padding: "45px",
-            textAlign: "center",
-            background:
-              "linear-gradient(145deg, #105666, #0A3323)",
-            borderRadius: "18px",
-            border: "1px solid rgba(131,153,88,0.2)",
+            color: "#839958",
+            fontSize: "10px",
+            fontWeight: "800",
           }}
         >
-          <div style={{ fontSize: "35px", marginBottom: "10px" }}>
-            ✓
-          </div>
+          ● LIVE ALERT DATA
+        </span>
 
-          <h3
-            style={{
-              color: "#F7F4D5",
-              margin: "0 0 7px",
-            }}
-          >
-            No alerts found
-          </h3>
-
-          <p
-            style={{
-              color: "#AEB99B",
-              margin: 0,
-              fontSize: "13px",
-            }}
-          >
-            {selectedZone
-              ? `There are no alerts for ${selectedZone.name} (${selectedZone.id}) matching the selected severity.`
-              : "There are no alerts matching the selected severity."}
-          </p>
-        </div>
-      )}
+        <span
+          style={{
+            color: "#7F8C72",
+            fontSize: "10px",
+          }}
+        >
+          LANDGUARD backend • Auto-refresh
+          enabled
+        </span>
+      </div>
     </section>
+  );
+}
+
+/* =====================================================
+   SUMMARY CARD
+===================================================== */
+
+function SummaryCard({
+  title,
+  value,
+  description,
+}) {
+  return (
+    <div
+      style={{
+        background:
+          "rgba(10,51,35,0.75)",
+        border:
+          "1px solid rgba(131,153,88,0.22)",
+        borderRadius: "15px",
+        padding: "18px",
+      }}
+    >
+      <div
+        style={{
+          color: "#839958",
+          fontSize: "10px",
+          fontWeight: "900",
+          letterSpacing: "1px",
+        }}
+      >
+        {title}
+      </div>
+
+      <div
+        style={{
+          color: "#F7F4D5",
+          fontSize: "28px",
+          fontWeight: "900",
+          marginTop: "8px",
+        }}
+      >
+        {value}
+      </div>
+
+      <div
+        style={{
+          color: "#7F8C72",
+          fontSize: "10px",
+          marginTop: "3px",
+        }}
+      >
+        {description}
+      </div>
+    </div>
+  );
+}
+
+/* =====================================================
+   INFO BOX
+===================================================== */
+
+function InfoBox({
+  label,
+  value,
+}) {
+  return (
+    <div
+      style={{
+        padding: "10px",
+        borderRadius: "8px",
+        background:
+          "rgba(0,0,0,0.10)",
+      }}
+    >
+      <div
+        style={{
+          color: "#7F8C72",
+          fontSize: "8px",
+          fontWeight: "900",
+        }}
+      >
+        {label}
+      </div>
+
+      <div
+        style={{
+          color: "#F7F4D5",
+          fontSize: "10px",
+          fontWeight: "800",
+          marginTop: "4px",
+        }}
+      >
+        {value}
+      </div>
+    </div>
   );
 }
 

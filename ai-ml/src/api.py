@@ -2,10 +2,16 @@ from flask import Flask, request, jsonify
 import joblib
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
 app = Flask(__name__)
 
-model = joblib.load("models/landslide_model.joblib")
+# Get the ai-ml directory
+BASE_DIR = Path(__file__).resolve().parents[1]
+
+# Load the trained 14-feature model
+MODEL_FILE = BASE_DIR / "model" / "landslide_model.joblib"
+model = joblib.load(MODEL_FILE)
 
 REQUIRED_FIELDS = [
     "zone_id",

@@ -1,161 +1,278 @@
-import { useState, useEffect } from "react";
-import { getDashboardSummary } from "../lib/api";
+import { useEffect, useState } from "react";
 
-function ImpactAnalysis({ selectedZone }) {
-  const [selectedCategory, setSelectedCategory] = useState("ALL");
+const API_BASE = "http://localhost:5000";
 
-  const [categories, setCategories] = useState([
+function ImpactAnalysis() {
+  const [impactData, setImpactData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [selectedCategory, setSelectedCategory] =
+    useState("ALL");
+
+  const fetchImpactData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await fetch(
+        `${API_BASE}/api/impact`
+      );
+
+      const data = await response.json();
+
+      console.log(
+        "LANDGUARD impact response:",
+        data
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ||
+            data.message ||
+            "Unable to load impact data."
+        );
+      }
+
+      const result =
+        data.data &&
+        typeof data.data === "object"
+          ? data.data
+          : data;
+
+      setImpactData(result);
+    } catch (err) {
+      console.error(
+        "LANDGUARD impact error:",
+        err
+      );
+
+      setError(
+        err.message ||
+          "Unable to connect to impact analysis service."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchImpactData();
+  }, []);
+
+  const population =
+    Number(
+      impactData?.population_exposed
+    ) || 0;
+
+  const villages =
+    Number(
+      impactData?.villages_affected
+    ) || 0;
+
+  const infrastructure =
+    impactData?.infrastructure || {};
+
+  const hospitals =
+    Number(infrastructure.hospitals) || 0;
+
+  const bridges =
+    Number(infrastructure.bridges) || 0;
+
+  const schools =
+    Number(infrastructure.schools) || 0;
+
+  const roads =
+    Number(infrastructure.roads) || 0;
+
+  const infrastructureTotal =
+    Number(infrastructure.total) || 0;
+
+  const fieldReports =
+    impactData?.field_reports || {};
+
+  const totalReports =
+    Number(fieldReports.total) || 0;
+
+  const criticalReports =
+    Number(fieldReports.critical) || 0;
+
+  const verifiedReports =
+    Number(fieldReports.verified) || 0;
+
+  const riskZones =
+    impactData?.risk_zones || {};
+
+  const totalRiskZones =
+    Number(riskZones.total) || 0;
+
+  const criticalRiskZones =
+    Number(riskZones.critical) || 0;
+
+  const maximumRiskScore =
+    Number(
+      riskZones.maximum_risk_score
+    ) || 0;
+
+  const activeAlerts =
+    Number(
+      impactData?.active_alerts
+    ) || 0;
+
+  const priorityResults =
+    Number(
+      impactData?.priority_results
+    ) || 0;
+
+  const populationScore =
+    Number(
+      impactData?.population_score
+    ) || 0;
+
+  const villageScore =
+    Number(
+      impactData?.village_score
+    ) || 0;
+
+  const infrastructureScore =
+    Number(
+      impactData?.infrastructure_score
+    ) || 0;
+
+  /*
+   * Build cards from REAL backend data.
+   */
+  const categories = [
     {
       key: "population",
       label: "Population",
       icon: "👥",
-      value: "22,240",
-      description: "People potentially exposed",
-      percentage: 78,
+      value: population.toLocaleString(),
+      description:
+        "People potentially exposed",
+      percentage: populationScore,
+    },
+
+    {
+      key: "villages",
+      label: "Villages",
+      icon: "🏘️",
+      value: villages.toLocaleString(),
+      description:
+        "Villages within monitored area",
+      percentage: villageScore,
     },
 
     {
       key: "infrastructure",
       label: "Infrastructure",
       icon: "🏥",
-      value: "74",
-      description: "Critical facilities at risk",
-      percentage: 65,
-    },
-
-    {
-      key: "transportation",
-      label: "Transportation",
-      icon: "🛣️",
-      value: "13,685",
-      description: "Road segments monitored",
-      percentage: 54,
-    },
-
-    {
-      key: "agriculture",
-      label: "Agriculture",
-      icon: "🌾",
-      value: currentImpact.agriculture.value,
-      description: "Agricultural exposure",
-      percentage: 42,
-    },
-  ]);
-
-  useEffect(() => {
-    getDashboardSummary()
-      .then((res) => {
-        if (res && res.data) {
-          const d = res.data;
-          setCategories([
-            {
-              key: "population",
-              label: "Population",
-              icon: "👥",
-              value: d.population_exposed ? d.population_exposed.toLocaleString() : "22,240",
-              description: "People in high-risk zones",
-              percentage: 78,
-            },
-            {
-              key: "infrastructure",
-              label: "Infrastructure",
-              icon: "🏥",
-              value: d.infrastructure ? d.infrastructure.total.toString() : "74",
-              description: "Hospitals & schools monitored",
-              percentage: 65,
-            },
-            {
-              key: "transportation",
-              label: "Transportation",
-              icon: "🛣️",
-              value: d.infrastructure ? d.infrastructure.road_segments.toLocaleString() : "13,685",
-              description: "Road segments monitored",
-              percentage: 54,
-            },
-            {
-              key: "agriculture",
-              label: "Agriculture",
-              icon: "🌾",
-              value: "42%",
-              description: "Sloping agricultural terrain",
-              percentage: 42,
-            },
-          ]);
-        }
-      })
-      .catch((err) => console.warn("Could not fetch impact summary:", err));
-  }, []);
-
-  // --------------------------------------------------
-  // RESPONSE ACTIONS
-  // --------------------------------------------------
-
-  const responseActions = [
-    {
-      priority: "CRITICAL",
-      title: "Prepare Emergency Response",
+      value:
+        infrastructureTotal.toLocaleString(),
       description:
-        "Activate emergency response teams and prepare evacuation resources for affected zones.",
-      icon: "🚨",
+        "Critical assets and roads",
+      percentage: infrastructureScore,
     },
 
     {
-      priority: "HIGH",
-      title: "Monitor Essential Infrastructure",
+      key: "risk",
+      label: "Risk Zones",
+      icon: "⚠️",
+      value:
+        totalRiskZones.toLocaleString(),
       description:
-        "Increase monitoring around hospitals, roads and other essential infrastructure.",
-      icon: "🏥",
-    },
-
-    {
-      priority: "HIGH",
-      title: "Review Evacuation Routes",
-      description:
-        "Review evacuation routes and road accessibility in areas exposed to landslide risk.",
-      icon: "🛣️",
-    },
-
-    {
-      priority: "MEDIUM",
-      title: "Continue Field Monitoring",
-      description:
-        "Collect additional field observations to improve situational awareness.",
-      icon: "📡",
+        "Monitored landslide risk zones",
+      percentage:
+        totalRiskZones > 0
+          ? Math.min(
+              (criticalRiskZones /
+                totalRiskZones) *
+                100,
+              100
+            )
+          : 0,
     },
   ];
 
-  // --------------------------------------------------
-  // CONTENT FILTER
-  // --------------------------------------------------
+  /*
+   * These response actions are generated
+   * from the real backend numbers.
+   */
+  const responseActions = [];
+
+  if (criticalRiskZones > 0) {
+    responseActions.push({
+      priority: "CRITICAL",
+      title:
+        "Review Critical Risk Zones",
+      description:
+        `${criticalRiskZones} high-priority risk zone(s) require immediate monitoring and response planning.`,
+      icon: "🚨",
+    });
+  }
+
+  if (activeAlerts > 0) {
+    responseActions.push({
+      priority: "CRITICAL",
+      title:
+        "Review Active Alerts",
+      description:
+        `${activeAlerts} active alert(s) are currently recorded in the LANDGUARD system.`,
+      icon: "🔔",
+    });
+  }
+
+  if (infrastructureTotal > 0) {
+    responseActions.push({
+      priority: "HIGH",
+      title:
+        "Monitor Critical Infrastructure",
+      description:
+        `${infrastructureTotal} infrastructure asset(s) and road segment(s) are included in the current impact assessment.`,
+      icon: "🏥",
+    });
+  }
+
+  if (roads > 0) {
+    responseActions.push({
+      priority: "HIGH",
+      title:
+        "Review Transportation Routes",
+      description:
+        `${roads} road record(s) are available for transportation impact assessment.`,
+      icon: "🛣️",
+    });
+  }
+
+  if (totalReports > 0) {
+    responseActions.push({
+      priority: "MEDIUM",
+      title:
+        "Continue Field Monitoring",
+      description:
+        `${totalReports} field report(s) have been submitted. ${verifiedReports} report(s) are verified.`,
+      icon: "📡",
+    });
+  }
+
+  if (priorityResults > 0) {
+    responseActions.push({
+      priority: "HIGH",
+      title:
+        "Review Response Priorities",
+      description:
+        `${priorityResults} priority result(s) are available for decision support.`,
+      icon: "📋",
+    });
+  }
 
   const visibleActions =
     selectedCategory === "ALL"
       ? responseActions
-      : responseActions.filter((action) => {
-          if (selectedCategory === "URGENT") {
-            return action.priority === "CRITICAL";
-          }
-
-          if (selectedCategory === "MONITORING") {
-            return (
-              action.priority === "HIGH" ||
-              action.priority === "MEDIUM"
-            );
-          }
-
-          return true;
-        });
-
-  // --------------------------------------------------
-  // RESPONSE PRIORITY COLORS
-  // --------------------------------------------------
-
-  const priorityColor =
-    currentImpact.responsePriority === "CRITICAL"
-      ? "#D3968C"
-      : currentImpact.responsePriority === "HIGH"
-      ? "#D9A441"
-      : "#839958";
+      : responseActions.filter(
+          (action) =>
+            action.priority ===
+            selectedCategory
+        );
 
   return (
     <section
@@ -167,11 +284,12 @@ function ImpactAnalysis({ selectedZone }) {
         scrollMarginTop: "95px",
       }}
     >
-      {/* =====================================
-          HEADER
-      ===================================== */}
-
-      <div style={{ marginBottom: "25px" }}>
+      {/* HEADER */}
+      <div
+        style={{
+          marginBottom: "25px",
+        }}
+      >
         <p
           style={{
             color: "#839958",
@@ -181,7 +299,7 @@ function ImpactAnalysis({ selectedZone }) {
             margin: "0 0 7px",
           }}
         >
-          DISASTER RESPONSE INTELLIGENCE
+          IMPACT ASSESSMENT
         </p>
 
         <h2
@@ -192,703 +310,639 @@ function ImpactAnalysis({ selectedZone }) {
             fontWeight: "800",
           }}
         >
-          Impact & Response Analysis
+          Community & Infrastructure Impact
         </h2>
 
         <p
           style={{
             color: "#B8C3A0",
-            fontSize: "15px",
             marginTop: "7px",
+            fontSize: "15px",
           }}
         >
-          Assess potential damage and prioritize emergency response actions.
+          Understand the people, villages and
+          infrastructure potentially affected by
+          landslide risk.
         </p>
-
-        {/* SELECTED ZONE */}
-
-        {selectedZone && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "9px",
-              flexWrap: "wrap",
-              marginTop: "13px",
-            }}
-          >
-            <span
-              style={{
-                color: "#839958",
-                fontSize: "11px",
-                fontWeight: "900",
-                letterSpacing: "1px",
-              }}
-            >
-              ANALYZING ZONE:
-            </span>
-
-            <span
-              style={{
-                color: "#F7F4D5",
-                fontSize: "13px",
-                fontWeight: "800",
-              }}
-            >
-              {selectedZone.name}
-            </span>
-
-            <span
-              style={{
-                color: "#839958",
-                background: "rgba(131,153,88,0.12)",
-                border: "1px solid rgba(131,153,88,0.3)",
-                padding: "4px 9px",
-                borderRadius: "7px",
-                fontSize: "10px",
-                fontWeight: "900",
-                letterSpacing: "0.5px",
-              }}
-            >
-              {selectedZone.id}
-            </span>
-          </div>
-        )}
       </div>
 
-      {/* =====================================
-          TOP IMPACT SUMMARY
-      ===================================== */}
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr",
-          gap: "20px",
-          marginBottom: "20px",
-        }}
-      >
-        {/* IMPACT SCORE */}
-
+      {/* LOADING */}
+      {loading && (
         <div
           style={{
-            position: "relative",
-            overflow: "hidden",
+            padding: "30px",
+            borderRadius: "18px",
             background:
-              "linear-gradient(145deg, #105666, #0A3323)",
-            border: "1px solid rgba(211,150,140,0.3)",
-            borderRadius: "22px",
-            padding: "28px",
-            minHeight: "220px",
-            boxSizing: "border-box",
+              "rgba(10,51,35,0.75)",
+            border:
+              "1px solid rgba(131,153,88,0.25)",
+            color: "#B8C3A0",
+            textAlign: "center",
           }}
         >
-          <div
-            style={{
-              position: "absolute",
-              width: "220px",
-              height: "220px",
-              borderRadius: "50%",
-              background:
-                "radial-gradient(circle, rgba(211,150,140,0.13), transparent 70%)",
-              right: "-60px",
-              top: "-70px",
-              pointerEvents: "none",
-            }}
-          />
-
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: "20px",
-              position: "relative",
-              zIndex: 1,
-            }}
-          >
-            <div>
-              <p
-                style={{
-                  color: "#B8C3A0",
-                  fontSize: "12px",
-                  fontWeight: "800",
-                  letterSpacing: "1.5px",
-                  margin: "0 0 10px",
-                }}
-              >
-                OVERALL IMPACT ASSESSMENT
-              </p>
-
-              <h3
-                style={{
-                  color: "#F7F4D5",
-                  fontSize: "25px",
-                  margin: "0 0 8px",
-                }}
-              >
-                Current Exposure Assessment
-              </h3>
-
-              <p
-                style={{
-                  color: "#9FAC8E",
-                  fontSize: "13px",
-                  lineHeight: "1.6",
-                  maxWidth: "480px",
-                  margin: 0,
-                }}
-              >
-                Population, infrastructure, transportation and agricultural
-                assets are being assessed for potential landslide impact.
-              </p>
-
-              <div
-                style={{
-                  marginTop: "18px",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "8px 12px",
-                  borderRadius: "999px",
-                  background: `${priorityColor}20`,
-                  border: `1px solid ${priorityColor}55`,
-                }}
-              >
-                <span
-                  style={{
-                    width: "8px",
-                    height: "8px",
-                    borderRadius: "50%",
-                    background: priorityColor,
-                    boxShadow: `0 0 10px ${priorityColor}`,
-                  }}
-                />
-
-                <span
-                  style={{
-                    color: priorityColor,
-                    fontSize: "11px",
-                    fontWeight: "900",
-                  }}
-                >
-                  RESPONSE READINESS
-                </span>
-              </div>
-            </div>
-
-            {/* SCORE CIRCLE */}
-
-            <div
-              style={{
-                minWidth: "145px",
-                height: "145px",
-                borderRadius: "50%",
-                background: `conic-gradient(${priorityColor} 0deg ${
-                  currentImpact.impactScore * 3.6
-                }deg, rgba(247,244,213,0.08) ${
-                  currentImpact.impactScore * 3.6
-                }deg 360deg)`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: `0 0 35px ${priorityColor}22`,
-              }}
-            >
-              <div
-                style={{
-                  width: "113px",
-                  height: "113px",
-                  borderRadius: "50%",
-                  background: "#0A3323",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <strong
-                  style={{
-                    color: "#F7F4D5",
-                    fontSize: "35px",
-                    lineHeight: 1,
-                  }}
-                >
-                  {currentImpact.impactScore}
-                </strong>
-
-                <span
-                  style={{
-                    color: priorityColor,
-                    fontSize: "10px",
-                    fontWeight: "900",
-                    marginTop: "6px",
-                  }}
-                >
-                  IMPACT SCORE
-                </span>
-              </div>
-            </div>
-          </div>
+          Loading real impact data from
+          LANDGUARD backend...
         </div>
-      </div>
+      )}
 
-      {/* =====================================
-          EXPOSURE CARDS
-      ===================================== */}
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-          gap: "15px",
-          marginBottom: "20px",
-        }}
-      >
-        {categories.map((item) => (
-          <div
-            key={item.key}
-            style={{
-              background:
-                "linear-gradient(145deg, #105666, #0A3323)",
-              border: "1px solid rgba(131,153,88,0.22)",
-              borderRadius: "18px",
-              padding: "20px",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "15px",
-              }}
-            >
-              <span
-                style={{
-                  width: "38px",
-                  height: "38px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: "11px",
-                  background: "rgba(131,153,88,0.1)",
-                  fontSize: "19px",
-                }}
-              >
-                {item.icon}
-              </span>
-
-              <span
-                style={{
-                  color: "#839958",
-                  fontSize: "10px",
-                  fontWeight: "900",
-                }}
-              >
-                {item.percentage}% EXPOSURE
-              </span>
-            </div>
-
-            <p
-              style={{
-                color: "#91A087",
-                fontSize: "11px",
-                margin: "0 0 4px",
-              }}
-            >
-              {item.label}
-            </p>
-
-            <strong
-              style={{
-                color: "#F7F4D5",
-                fontSize: "26px",
-              }}
-            >
-              {item.value}
-            </strong>
-
-            <p
-              style={{
-                color: "#7F8C72",
-                fontSize: "10px",
-                margin: "5px 0 13px",
-              }}
-            >
-              {item.description}
-            </p>
-
-            <div
-              style={{
-                height: "5px",
-                background: "rgba(247,244,213,0.08)",
-                borderRadius: "999px",
-                overflow: "hidden",
-              }}
-            >
-              <div
-                style={{
-                  width: `${item.percentage}%`,
-                  height: "100%",
-                  borderRadius: "999px",
-                  background:
-                    item.percentage >= 70
-                      ? "#D3968C"
-                      : item.percentage >= 50
-                      ? "#D9A441"
-                      : "#839958",
-                }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* =====================================
-          IMPACT BREAKDOWN + RESPONSE ACTIONS
-      ===================================== */}
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "0.9fr 1.1fr",
-          gap: "20px",
-        }}
-      >
-        {/* BREAKDOWN */}
-
+      {/* ERROR */}
+      {!loading && error && (
         <div
           style={{
+            padding: "18px",
+            borderRadius: "12px",
             background:
-              "linear-gradient(145deg, #105666, #0A3323)",
-            border: "1px solid rgba(131,153,88,0.22)",
-            borderRadius: "20px",
-            padding: "24px",
+              "rgba(184,58,58,0.14)",
+            border:
+              "1px solid rgba(184,58,58,0.4)",
+            color: "#F0B4B4",
+            fontSize: "13px",
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "22px",
-            }}
-          >
-            <div>
-              <h3
-                style={{
-                  color: "#F7F4D5",
-                  fontSize: "18px",
-                  margin: 0,
-                }}
-              >
-                Impact Breakdown
-              </h3>
-
-              <p
-                style={{
-                  color: "#7F8C72",
-                  fontSize: "11px",
-                  margin: "5px 0 0",
-                }}
-              >
-                Relative exposure across sectors
-              </p>
-            </div>
-
-            <span
-              style={{
-                color: "#839958",
-                fontSize: "10px",
-                fontWeight: "900",
-              }}
-            >
-              LIVE MODEL
-            </span>
-          </div>
-
-          {categories.map((item) => (
-            <div
-              key={item.key}
-              style={{
-                marginBottom: "19px",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: "7px",
-                }}
-              >
-                <span
-                  style={{
-                    color: "#C0C8B1",
-                    fontSize: "12px",
-                  }}
-                >
-                  {item.icon} {item.label}
-                </span>
-
-                <strong
-                  style={{
-                    color: "#F7F4D5",
-                    fontSize: "12px",
-                  }}
-                >
-                  {item.percentage}%
-                </strong>
-              </div>
-
-              <div
-                style={{
-                  height: "8px",
-                  background: "rgba(247,244,213,0.07)",
-                  borderRadius: "999px",
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    width: `${item.percentage}%`,
-                    height: "100%",
-                    borderRadius: "999px",
-                    background:
-                      item.percentage >= 70
-                        ? "#D3968C"
-                        : item.percentage >= 50
-                        ? "#D9A441"
-                        : "#839958",
-                  }}
-                />
-              </div>
-            </div>
-          ))}
-
-          <div
-            style={{
-              marginTop: "25px",
-              padding: "13px",
-              borderRadius: "11px",
-              background: "rgba(131,153,88,0.07)",
-              border: "1px solid rgba(131,153,88,0.16)",
-            }}
-          >
-            <p
-              style={{
-                color: "#839958",
-                fontSize: "10px",
-                fontWeight: "900",
-                margin: "0 0 5px",
-              }}
-            >
-              ANALYSIS
-            </p>
-
-            <p
-              style={{
-                color: "#9FAC8E",
-                fontSize: "11px",
-                lineHeight: "1.5",
-                margin: 0,
-              }}
-            >
-              Population, infrastructure, transportation and
-              agricultural exposure are being evaluated for the
-              selected zone to support authority response decisions.
-            </p>
-          </div>
+          <strong>
+            Impact data unavailable:
+          </strong>{" "}
+          {error}
         </div>
+      )}
 
-        {/* RESPONSE ACTIONS */}
-
-        <div
-          style={{
-            background:
-              "linear-gradient(145deg, #105666, #0A3323)",
-            border: "1px solid rgba(131,153,88,0.22)",
-            borderRadius: "20px",
-            padding: "24px",
-          }}
-        >
+      {/* DATA */}
+      {!loading && !error && impactData && (
+        <>
+          {/* CATEGORY CARDS */}
           <div
             style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: "10px",
-              marginBottom: "18px",
-              flexWrap: "wrap",
+              display: "grid",
+              gridTemplateColumns:
+                "repeat(4, minmax(0, 1fr))",
+              gap: "15px",
             }}
           >
-            <div>
-              <h3
-                style={{
-                  color: "#F7F4D5",
-                  fontSize: "18px",
-                  margin: 0,
-                }}
-              >
-                Recommended Response
-              </h3>
+            {categories.map((category) => {
+              const isSelected =
+                selectedCategory ===
+                category.key;
 
-              <p
-                style={{
-                  color: "#7F8C72",
-                  fontSize: "11px",
-                  margin: "5px 0 0",
-                }}
-              >
-                AI-assisted authority action priorities
-              </p>
-            </div>
-
-            {/* FILTERS */}
-
-            <div
-              style={{
-                display: "flex",
-                gap: "5px",
-                flexWrap: "wrap",
-              }}
-            >
-              {["ALL", "URGENT", "MONITORING"].map((filter) => (
+              return (
                 <button
-                  key={filter}
-                  onClick={() => setSelectedCategory(filter)}
+                  key={category.key}
+                  type="button"
+                  onClick={() =>
+                    setSelectedCategory(
+                      isSelected
+                        ? "ALL"
+                        : category.key
+                    )
+                  }
                   style={{
-                    border:
-                      selectedCategory === filter
-                        ? "1px solid rgba(131,153,88,0.6)"
-                        : "1px solid rgba(247,244,213,0.08)",
-                    background:
-                      selectedCategory === filter
-                        ? "rgba(131,153,88,0.15)"
-                        : "rgba(247,244,213,0.03)",
-                    color:
-                      selectedCategory === filter
-                        ? "#839958"
-                        : "#87957D",
-                    borderRadius: "7px",
-                    padding: "6px 9px",
-                    fontSize: "9px",
-                    fontWeight: "900",
+                    textAlign: "left",
                     cursor: "pointer",
-                  }}
-                >
-                  {filter}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-            }}
-          >
-            {visibleActions.map((action, index) => (
-              <div
-                key={`${action.title}-${index}`}
-                style={{
-                  display: "flex",
-                  gap: "13px",
-                  padding: "13px",
-                  borderRadius: "12px",
-                  background: "rgba(10,51,35,0.48)",
-                  border:
-                    "1px solid rgba(247,244,213,0.06)",
-                }}
-              >
-                <div
-                  style={{
-                    minWidth: "38px",
-                    height: "38px",
-                    borderRadius: "10px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
+                    padding: "20px",
+                    borderRadius: "16px",
+                    border: isSelected
+                      ? "1px solid rgba(131,153,88,0.7)"
+                      : "1px solid rgba(131,153,88,0.2)",
                     background:
-                      action.priority === "CRITICAL"
-                        ? "rgba(211,150,140,0.12)"
-                        : "rgba(217,164,65,0.1)",
-                    fontSize: "17px",
+                      isSelected
+                        ? "rgba(131,153,88,0.12)"
+                        : "rgba(10,51,35,0.72)",
+                    color: "#F7F4D5",
                   }}
                 >
-                  {action.icon}
-                </div>
-
-                <div style={{ flex: 1 }}>
                   <div
                     style={{
                       display: "flex",
-                      justifyContent: "space-between",
-                      gap: "10px",
+                      justifyContent:
+                        "space-between",
                       alignItems: "center",
                     }}
                   >
-                    <strong
+                    <span
                       style={{
-                        color: "#F7F4D5",
-                        fontSize: "12px",
+                        fontSize: "22px",
                       }}
                     >
-                      {action.title}
-                    </strong>
+                      {category.icon}
+                    </span>
 
                     <span
                       style={{
-                        color:
-                          action.priority === "CRITICAL"
-                            ? "#D3968C"
-                            : action.priority === "HIGH"
-                            ? "#D9A441"
-                            : "#839958",
-                        fontSize: "9px",
+                        color: "#839958",
+                        fontSize: "10px",
                         fontWeight: "900",
                       }}
                     >
-                      {action.priority === "CRITICAL"
-                        ? "URGENT"
-                        : action.priority === "HIGH"
-                        ? "MONITOR"
-                        : "ROUTINE"}
+                      {Math.round(
+                        category.percentage
+                      )}
+                      %
                     </span>
                   </div>
 
-                  <p
+                  <div
                     style={{
-                      color: "#89977C",
-                      fontSize: "10px",
-                      lineHeight: "1.5",
-                      margin: "5px 0 0",
+                      color: "#9FAC8E",
+                      fontSize: "11px",
+                      fontWeight: "800",
+                      marginTop: "13px",
                     }}
                   >
-                    {action.description}
-                  </p>
-                </div>
-              </div>
-            ))}
+                    {category.label}
+                  </div>
 
-            {visibleActions.length === 0 && (
-              <div
+                  <div
+                    style={{
+                      color: "#F7F4D5",
+                      fontSize: "28px",
+                      fontWeight: "900",
+                      marginTop: "4px",
+                    }}
+                  >
+                    {category.value}
+                  </div>
+
+                  <div
+                    style={{
+                      color: "#7F8C72",
+                      fontSize: "10px",
+                      marginTop: "3px",
+                    }}
+                  >
+                    {category.description}
+                  </div>
+
+                  {/* PROGRESS */}
+                  <div
+                    style={{
+                      height: "5px",
+                      background:
+                        "rgba(247,244,213,0.08)",
+                      borderRadius: "999px",
+                      overflow: "hidden",
+                      marginTop: "15px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${Math.min(
+                          Math.max(
+                            category.percentage,
+                            0
+                          ),
+                          100
+                        )}%`,
+                        height: "100%",
+                        background:
+                          "#839958",
+                        borderRadius:
+                          "999px",
+                      }}
+                    />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* DETAIL PANEL */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns:
+                "1fr 1fr",
+              gap: "20px",
+              marginTop: "20px",
+            }}
+          >
+            {/* EXPOSURE DETAILS */}
+            <div
+              style={{
+                background:
+                  "linear-gradient(145deg, #105666, #0A3323)",
+                border:
+                  "1px solid rgba(131,153,88,0.25)",
+                borderRadius: "20px",
+                padding: "25px",
+              }}
+            >
+              <h3
                 style={{
-                  padding: "25px",
-                  textAlign: "center",
-                  color: "#7F8C72",
-                  fontSize: "12px",
+                  color: "#F7F4D5",
+                  fontSize: "19px",
+                  margin: "0 0 18px",
                 }}
               >
-                No response actions found.
-              </div>
-            )}
+                Exposure Details
+              </h3>
+
+              <DetailRow
+                label="Population Exposed"
+                value={population.toLocaleString()}
+              />
+
+              <DetailRow
+                label="Villages Affected"
+                value={villages.toLocaleString()}
+              />
+
+              <DetailRow
+                label="Hospitals"
+                value={hospitals}
+              />
+
+              <DetailRow
+                label="Bridges"
+                value={bridges}
+              />
+
+              <DetailRow
+                label="Schools"
+                value={schools}
+              />
+
+              <DetailRow
+                label="Roads"
+                value={roads}
+              />
+
+              <DetailRow
+                label="Total Infrastructure"
+                value={infrastructureTotal}
+              />
+            </div>
+
+            {/* SYSTEM STATUS */}
+            <div
+              style={{
+                background:
+                  "linear-gradient(145deg, #105666, #0A3323)",
+                border:
+                  "1px solid rgba(131,153,88,0.25)",
+                borderRadius: "20px",
+                padding: "25px",
+              }}
+            >
+              <h3
+                style={{
+                  color: "#F7F4D5",
+                  fontSize: "19px",
+                  margin: "0 0 18px",
+                }}
+              >
+                LANDGUARD Situation
+              </h3>
+
+              <DetailRow
+                label="Total Risk Zones"
+                value={totalRiskZones}
+              />
+
+              <DetailRow
+                label="High/Critical Zones"
+                value={criticalRiskZones}
+              />
+
+              <DetailRow
+                label="Maximum Risk Score"
+                value={`${maximumRiskScore}/100`}
+              />
+
+              <DetailRow
+                label="Active Alerts"
+                value={activeAlerts}
+              />
+
+              <DetailRow
+                label="Field Reports"
+                value={totalReports}
+              />
+
+              <DetailRow
+                label="Verified Reports"
+                value={verifiedReports}
+              />
+
+              <DetailRow
+                label="Priority Results"
+                value={priorityResults}
+              />
+            </div>
           </div>
-        </div>
-      </div>
+
+          {/* RESPONSE ACTIONS */}
+          <div
+            style={{
+              marginTop: "20px",
+              background:
+                "rgba(10,51,35,0.72)",
+              border:
+                "1px solid rgba(131,153,88,0.2)",
+              borderRadius: "20px",
+              padding: "25px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent:
+                  "space-between",
+                alignItems: "center",
+                gap: "15px",
+                marginBottom: "18px",
+                flexWrap: "wrap",
+              }}
+            >
+              <div>
+                <h3
+                  style={{
+                    color: "#F7F4D5",
+                    fontSize: "19px",
+                    margin: 0,
+                  }}
+                >
+                  Recommended Response Actions
+                </h3>
+
+                <p
+                  style={{
+                    color: "#7F8C72",
+                    fontSize: "11px",
+                    margin:
+                      "5px 0 0",
+                  }}
+                >
+                  Actions based on current
+                  LANDGUARD system data.
+                </p>
+              </div>
+
+              {/* FILTER */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: "6px",
+                }}
+              >
+                {[
+                  "ALL",
+                  "CRITICAL",
+                  "HIGH",
+                  "MEDIUM",
+                ].map((priority) => (
+                  <button
+                    key={priority}
+                    type="button"
+                    onClick={() =>
+                      setSelectedCategory(
+                        priority
+                      )
+                    }
+                    style={{
+                      padding:
+                        "7px 10px",
+                      borderRadius:
+                        "8px",
+                      border:
+                        "1px solid rgba(131,153,88,0.25)",
+                      background:
+                        selectedCategory ===
+                        priority
+                          ? "rgba(131,153,88,0.2)"
+                          : "transparent",
+                      color:
+                        selectedCategory ===
+                        priority
+                          ? "#F7F4D5"
+                          : "#7F8C72",
+                      fontSize: "9px",
+                      fontWeight: "900",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {priority}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ACTION LIST */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+              }}
+            >
+              {visibleActions.map(
+                (action, index) => (
+                  <div
+                    key={`${action.title}-${index}`}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "14px",
+                      padding: "15px",
+                      borderRadius: "12px",
+                      background:
+                        "rgba(0,0,0,0.12)",
+                      border:
+                        "1px solid rgba(247,244,213,0.07)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "42px",
+                        height: "42px",
+                        flexShrink: 0,
+                        borderRadius:
+                          "10px",
+                        display: "flex",
+                        alignItems:
+                          "center",
+                        justifyContent:
+                          "center",
+                        background:
+                          action.priority ===
+                          "CRITICAL"
+                            ? "rgba(211,150,140,0.12)"
+                            : action.priority ===
+                              "HIGH"
+                            ? "rgba(217,164,65,0.1)"
+                            : "rgba(131,153,88,0.1)",
+                        fontSize: "18px",
+                      }}
+                    >
+                      {action.icon}
+                    </div>
+
+                    <div
+                      style={{
+                        flex: 1,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent:
+                            "space-between",
+                          alignItems:
+                            "center",
+                          gap: "10px",
+                        }}
+                      >
+                        <strong
+                          style={{
+                            color:
+                              "#F7F4D5",
+                            fontSize:
+                              "12px",
+                          }}
+                        >
+                          {action.title}
+                        </strong>
+
+                        <span
+                          style={{
+                            color:
+                              action.priority ===
+                              "CRITICAL"
+                                ? "#D3968C"
+                                : action.priority ===
+                                  "HIGH"
+                                ? "#D9A441"
+                                : "#839958",
+                            fontSize:
+                              "9px",
+                            fontWeight:
+                              "900",
+                          }}
+                        >
+                          {
+                            action.priority
+                          }
+                        </span>
+                      </div>
+
+                      <p
+                        style={{
+                          color:
+                            "#89977C",
+                          fontSize:
+                            "10px",
+                          lineHeight:
+                            "1.5",
+                          margin:
+                            "5px 0 0",
+                        }}
+                      >
+                        {
+                          action.description
+                        }
+                      </p>
+                    </div>
+                  </div>
+                )
+              )}
+
+              {visibleActions.length ===
+                0 && (
+                <div
+                  style={{
+                    padding:
+                      "25px",
+                    textAlign:
+                      "center",
+                    color:
+                      "#7F8C72",
+                    fontSize:
+                      "12px",
+                  }}
+                >
+                  No response actions
+                  found for this
+                  category.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* DATA SOURCE */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent:
+                "space-between",
+              alignItems: "center",
+              marginTop: "15px",
+              gap: "10px",
+              flexWrap: "wrap",
+            }}
+          >
+            <span
+              style={{
+                color: "#839958",
+                fontSize: "10px",
+                fontWeight: "800",
+              }}
+            >
+              ● LIVE BACKEND DATA
+            </span>
+
+            <span
+              style={{
+                color: "#7F8C72",
+                fontSize: "10px",
+              }}
+            >
+              Source: LANDGUARD PostgreSQL /
+              PostGIS
+            </span>
+          </div>
+        </>
+      )}
     </section>
+  );
+}
+
+/* =====================================================
+   DETAIL ROW
+===================================================== */
+
+function DetailRow({
+  label,
+  value,
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent:
+          "space-between",
+        alignItems: "center",
+        gap: "15px",
+        padding: "12px 0",
+        borderBottom:
+          "1px solid rgba(247,244,213,0.07)",
+      }}
+    >
+      <span
+        style={{
+          color: "#8C997F",
+          fontSize: "11px",
+        }}
+      >
+        {label}
+      </span>
+
+      <strong
+        style={{
+          color: "#F7F4D5",
+          fontSize: "12px",
+        }}
+      >
+        {value}
+      </strong>
+    </div>
   );
 }
 
