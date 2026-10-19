@@ -1,5 +1,19 @@
+
+# Environment variables and secrets
 .env
+.env.*
+
+# Python virtual environment
 venv/
+.venv/
+
+# Python cache
 __pycache__/
 *.pyc
+
+# Uploaded files
 uploads/
+
+# Frontend dependencies and build files
+node_modules/
+dist/
